@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AI角色扮演平台</title>
+    <style>
+        :root{--phone-bg:#1a1a2e;--bubble-mine:#16213e;--bubble-his:#fff;--accent:#e94560;--text-dark:#2c2c2c;--border:#e0dcd5;--tab-active:#1a1a2e;--tab-inactive:#999;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{display:flex;justify-content:center;align-items:center;min-height:100vh;background:#1a1a2e;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;padding:20px;-webkit-tap-highlight-color:transparent;user-select:none;}
+        .phone-container{width:390px;height:760px;background:#1a1a2e;border-radius:40px;padding:16px;box-shadow:0 0 0 3px #2a2a3e,0 0 0 6px #1a1a2e,0 20px 60px rgba(0,0,0,0.5);position:relative;}
+        .screen{width:100%;height:100%;background:#f5f5f0;border-radius:28px;overflow:hidden;display:flex;flex-direction:column;position:relative;}
+        .dynamic-island{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:100px;height:28px;background:#1a1a2e;border-radius:20px;z-index:100;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;transition:all 0.4s;cursor:pointer;overflow:hidden;}
+        .dynamic-island.expanded{width:85%;height:200px;border-radius:24px;flex-direction:column;padding:14px;gap:10px;}
+        .dynamic-island .island-icon{font-size:12px;color:#fff;flex-shrink:0;}
+        .dynamic-island .island-text{color:#fff;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60px;}
+        .dynamic-island.expanded .island-text{max-width:none;font-size:12px;white-space:normal;}
+        .dynamic-island .island-music{display:none;width:100%;}
+        .dynamic-island.expanded .island-music{display:flex;flex-direction:column;gap:6px;width:100%;}
+        .dynamic-island .island-music input{width:100%;padding:6px 10px;border-radius:8px;border:none;font-size:11px;background:rgba(255,255,255,0.15);color:#fff;outline:none;}
+        .dynamic-island .island-music .music-controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+        .dynamic-island .island-music .music-btn{padding:5px 10px;border-radius:12px;border:none;background:rgba(255,255,255,0.2);color:#fff;font-size:11px;cursor:pointer;}
+        .dynamic-island .island-close{display:none;position:absolute;top:8px;right:12px;color:rgba(255,255,255,0.6);font-size:14px;cursor:pointer;}
+        .dynamic-island.expanded .island-close{display:block;}
+        .dynamic-island .music-now-playing{color:#fff;font-size:10px;text-align:center;opacity:0.7;display:none;}
+        .dynamic-island.expanded .music-now-playing{display:block;}
+      .status-bar{background:#f5f5f0;padding:14px 20px 6px;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#1a1a2e;font-weight:600;flex-shrink:0;}
+.status-bar .time{font-size:13px;font-weight:700;}
+.top-nav{background:#f5f5f0;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid #e0dcd5;}
+.top-nav .title{font-size:16px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;}
+.top-nav .back-btn{width:32px;height:32px;border-radius:50%;background:#e8e4dc;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:16px;}
+.top-nav .nav-right{display:flex;gap:6px;align-items:center;}
+.top-nav .bell-btn{width:32px;height:32px;border-radius:50%;background:#e8e4dc;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:16px;position:relative;}
+.bell-btn .badge{position:absolute;top:-2px;right:-2px;width:16px;height:16px;background:#e94560;border-radius:50%;font-size:9px;color:#fff;display:none;align-items:center;justify-content:center;}
+.bell-btn .badge.show{display:flex;}
+.page-container{flex:1;overflow:hidden;position:relative;background:#f5f5f0;}
+.page{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;overflow-y:auto;transition:opacity 0.3s;background:#f5f5f0;}
+.page.hidden{opacity:0;pointer-events:none;}
+.page.active{opacity:1;pointer-events:all;}
+.overlay-page{position:absolute;top:0;left:0;width:100%;height:100%;z-index:50;background:#f5f5f0;display:flex;flex-direction:column;overflow-y:auto;transform:translateX(100%);transition:transform 0.3s;}
+.overlay-page.show{transform:translateX(0);}
+.creator-profile-header{position:relative;width:100%;height:180px;overflow:hidden;}
+.creator-profile-header img{width:100%;height:100%;object-fit:cover;}
+.creator-profile-header .creator-avatar{position:absolute;bottom:-35px;left:14px;width:80px;height:80px;border-radius:50%;border:3px solid #fff;overflow:hidden;background:#e8e4dc;z-index:2;}
+.creator-profile-header .creator-avatar img{width:100%;height:100%;object-fit:cover;}
+.creator-profile-header .avatar-frame{position:absolute;bottom:-35px;left:14px;width:80px;height:80px;border-radius:50%;z-index:3;pointer-events:none;}
+.creator-info-section{padding:44px 14px 14px;background:#fff;margin-bottom:6px;}
+.creator-info-section .creator-name{font-size:18px;font-weight:800;}
+.creator-info-section .creator-level{display:inline-block;background:#f0c040;color:#fff;font-size:9px;padding:2px 8px;border-radius:10px;margin-left:6px;}
+.creator-info-section .fan-badge{display:inline-block;background:#e94560;color:#fff;font-size:9px;padding:2px 8px;border-radius:10px;margin-left:4px;}
+.creator-info-section .creator-bio{font-size:11px;color:#888;margin-top:4px;}
+.creator-info-section .creator-widget{margin-top:6px;}
+.creator-actions{display:flex;gap:8px;margin-top:8px;}
+.official-badge{display:inline-block;background:#e94560;color:#fff;font-size:9px;padding:2px 8px;border-radius:10px;margin-left:6px;font-weight:600;}
+.fan-club-panel{background:#fff;border-radius:14px;padding:14px;margin:14px;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+.fan-club-panel h4{font-size:13px;color:#1a1a2e;margin-bottom:8px;}
+.fan-level-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:11px;}
+.fan-level-item .level-name{font-weight:600;}
+.fan-level-item .level-cost{color:#e94560;}
+.admin-panel{background:#fff;border-radius:14px;padding:14px;margin:14px;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+.admin-panel h4{font-size:13px;color:#1a1a2e;margin-bottom:8px;}
+.review-card{background:#f8f7f4;border-radius:10px;padding:10px;margin-bottom:8px;}
+.review-card .review-name{font-weight:700;font-size:12px;}
+.review-card .review-creator{font-size:10px;color:#888;}
+.edit-section-collapse{border:1px solid #e0e0e0;border-radius:10px;margin-bottom:10px;overflow:hidden;}
+.edit-section-collapse .collapse-header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#f0f0f0;cursor:pointer;font-size:13px;font-weight:600;}
+.edit-section-collapse .collapse-body{display:none;padding:10px 12px;}
+.edit-section-collapse .collapse-body.show{display:block;}
+.edit-section-collapse .collapse-body textarea,.edit-section-collapse .collapse-body input[type=text]{width:100%;padding:10px;border-radius:8px;border:1.5px solid #ddd;font-size:13px;margin-bottom:6px;resize:vertical;min-height:100px;}
+      .login-container{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;}
+.login-container h2{font-size:20px;color:#1a1a2e;margin-bottom:16px;}
+.login-container input{width:100%;padding:12px;border-radius:12px;border:1.5px solid #ddd;font-size:14px;margin-bottom:10px;background:#fff;outline:none;}
+.login-container .login-btn{width:100%;padding:12px;border-radius:12px;border:none;background:#1a1a2e;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px;}
+.login-container .toggle-text{font-size:12px;color:#666;margin-top:10px;cursor:pointer;}
+.search-box{padding:8px 14px;}
+.search-box input{width:100%;padding:10px 14px;border-radius:20px;border:1.5px solid #ddd;font-size:13px;background:#fff;outline:none;}
+.npc-card-list{flex:1;overflow-y:auto;padding:14px;display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;align-content:flex-start;}
+.npc-card{width:calc(50% - 5px);background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);cursor:pointer;position:relative;}
+.npc-card .npc-card-img{width:100%;height:140px;object-fit:cover;background:#e8e4dc;display:flex;align-items:center;justify-content:center;font-size:36px;color:#ccc;}
+.npc-card .npc-card-info{padding:8px 10px;}
+.npc-card .npc-card-name{font-weight:700;font-size:13px;color:#1a1a2e;}
+.npc-card .npc-card-desc{font-size:10px;color:#888;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.npc-card .npc-card-stats{display:flex;gap:8px;font-size:9px;color:#aaa;margin-top:3px;}
+.tag-filter-bar{display:flex;gap:6px;overflow-x:auto;padding:8px 14px;flex-shrink:0;}
+.tag-filter-bar .tag-chip{padding:6px 14px;border-radius:16px;border:1.5px solid #ddd;background:#fff;font-size:11px;white-space:nowrap;cursor:pointer;}
+.tag-filter-bar .tag-chip.active{background:#1a1a2e;color:#fff;border-color:#1a1a2e;}
+.sort-bar{display:flex;gap:8px;padding:4px 14px 8px;font-size:10px;color:#888;}
+.sort-bar span{cursor:pointer;padding:2px 8px;border-radius:8px;}
+.sort-bar span.active{background:#e8e4dc;color:#1a1a2e;font-weight:600;}
+.role-detail-scroll{flex:1;overflow-y:auto;}
+.role-cover{position:relative;width:100%;height:220px;overflow:hidden;}
+.role-cover img{width:100%;height:100%;object-fit:cover;}
+.role-cover .cover-btns{position:absolute;top:10px;right:10px;display:flex;gap:6px;}
+.role-cover .cover-btn{padding:6px 12px;border-radius:16px;border:none;background:rgba(255,255,255,0.9);font-size:11px;font-weight:600;cursor:pointer;}
+.role-info-section{padding:14px;background:#fff;margin-bottom:6px;}
+.role-info-section .role-name{font-size:20px;font-weight:800;color:#1a1a2e;}
+.comment-section{padding:14px;}
+.comment-section h4{font-size:14px;color:#1a1a2e;margin-bottom:8px;}
+.comment-item{background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:6px;}
+.comment-item .comment-header{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.comment-item .comment-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#3a6ea5,#5a8ec5);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;}
+.comment-item .comment-name{font-weight:700;font-size:11px;}
+.comment-item .comment-time{font-size:9px;color:#999;margin-left:auto;}
+.comment-item .comment-text{font-size:12px;color:#333;line-height:1.5;}
+.mask-switch-bar{display:flex;gap:6px;overflow-x:auto;padding:8px 0;}
+.mask-switch-bar .mask-chip{padding:5px 12px;border-radius:14px;border:1.5px solid #ddd;background:#fff;font-size:10px;white-space:nowrap;cursor:pointer;}
+.mask-switch-bar .mask-chip.active{background:#1a1a2e;color:#fff;border-color:#1a1a2e;}
+.comment-input-row{display:flex;gap:6px;padding:8px 0;align-items:center;}
+.comment-input-row input{flex:1;padding:9px 14px;border-radius:18px;border:1.5px solid #ddd;font-size:12px;background:#f8f7f4;outline:none;}
+.comment-input-row button{padding:8px 16px;border-radius:18px;border:none;background:#1a1a2e;color:#fff;font-size:12px;font-weight:600;cursor:pointer;}
+.chat-messages{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+.chat-bubble{max-width:78%;padding:9px 12px;border-radius:18px;font-size:13px;line-height:1.5;word-break:break-word;animation:fadeIn 0.25s;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.chat-bubble.his{align-self:flex-start;background:#fff;color:#2c2c2c;border-bottom-left-radius:4px;}
+.chat-bubble.mine{align-self:flex-end;background:#1a1a2e;color:#fff;border-bottom-right-radius:4px;}
+.chat-bubble .sender-name{font-size:9px;color:#999;margin-bottom:2px;display:block;}
+.msg-actions{display:flex;gap:6px;margin-top:3px;font-size:9px;color:#bbb;}
+.msg-actions span{cursor:pointer;padding:1px 5px;border-radius:6px;}
+.notif-item{background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:4px;display:flex;gap:8px;align-items:flex-start;}
+.notif-item.unread{background:#f0f5ff;border-left:3px solid #3a6ea5;}
+.notif-item .notif-icon{font-size:20px;flex-shrink:0;}
+.notif-item .notif-content{flex:1;font-size:11px;color:#333;line-height:1.4;}
+.notif-item .notif-time{font-size:9px;color:#999;}
+      .moments-feed{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px;background:#f5f5f0;}
+        .moment-card{background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+        .moment-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+        .moment-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex-shrink:0;overflow:hidden;background:linear-gradient(135deg,#1a1a2e,#3a3a5e);}
+        .moment-user-name{font-weight:700;font-size:14px;color:#1a1a2e;}
+        .moment-time{font-size:11px;color:#999;}
+        .moment-content{font-size:13.5px;line-height:1.6;color:#2c2c2c;margin-bottom:10px;}
+        .moment-actions{display:flex;gap:20px;padding-top:8px;border-top:1px solid #f0f0f0;}
+        .moment-actions .action-btn{background:none;border:none;cursor:pointer;font-size:12px;color:#999;display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:12px;}
+        .moment-actions .action-btn.liked{color:#e94560;}
+        .user-moment-input{padding:10px 14px;background:#fff;border-top:1px solid #e0dcd5;display:flex;gap:8px;align-items:center;flex-shrink:0;}
+        .user-moment-input input{flex:1;padding:9px 14px;border-radius:18px;border:1.5px solid #ddd;font-size:12px;background:#f8f7f4;outline:none;}
+        .user-moment-input button{padding:9px 16px;border-radius:18px;border:none;background:#e94560;color:#fff;cursor:pointer;font-size:12px;white-space:nowrap;font-weight:600;}
+        .transfer-card{background:#fff9e6!important;border:2px solid #f0c040!important;text-align:center;padding:14px!important;border-radius:14px!important;min-width:180px;}
+        .transfer-card .transfer-amount{font-size:22px;font-weight:800;color:#e94560;}
+        .transfer-status-badge{font-size:10px;margin-top:4px;padding:3px 10px;border-radius:10px;display:inline-block;font-weight:600;}
+        .transfer-status-badge.pending{background:#fff3cd;color:#856404;}
+        .transfer-status-badge.received{background:#d4edda;color:#155724;}
+        .transfer-status-badge.returned{background:#f8d7da;color:#721c24;}
+        .transfer-actions{display:flex;gap:6px;justify-content:center;margin-top:6px;}
+        .transfer-action-btn{padding:5px 12px;border-radius:12px;border:none;font-size:10px;cursor:pointer;font-weight:600;}
+        .transfer-action-btn.receive-btn{background:#28a745;color:#fff;}
+        .transfer-action-btn.return-btn{background:#dc3545;color:#fff;}
+        .location-card{background:#e8f4fd!important;border:2px solid #5b9bd5!important;text-align:center;padding:12px!important;border-radius:14px!important;min-width:160px;}
+        .red-packet-card{background:#fff5f5!important;border:2px solid #e94560!important;text-align:center;padding:12px!important;border-radius:14px!important;min-width:160px;}
+        .red-packet-card .packet-icon{font-size:32px;}
+        .red-packet-card .packet-text{font-size:13px;font-weight:700;color:#e94560;}
+        .red-packet-card.opened .packet-icon{opacity:0.5;}
+        .chat-input-area{display:flex;gap:5px;padding:8px 12px;background:#fff;border-top:1px solid #e0dcd5;align-items:center;flex-shrink:0;position:relative;}
+        .chat-input-area input{flex:1;min-width:60px;padding:8px 12px;border-radius:18px;border:1.5px solid #ddd;font-size:12px;background:#f8f7f4;outline:none;}
+        .send-btn{width:32px;height:32px;border-radius:50%;border:none;background:#1a1a2e;color:#fff;font-size:14px;cursor:pointer;flex-shrink:0;}
+        .plus-menu{display:none;position:absolute;bottom:46px;right:10px;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:6px;z-index:50;flex-direction:column;gap:2px;}
+        .plus-menu.show{display:flex;}
+        .plus-menu .plus-item{padding:8px 14px;border-radius:8px;border:none;background:none;font-size:11px;cursor:pointer;text-align:left;}
+        .settings-page{padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;}
+        .settings-card{background:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+        .settings-card h3{font-size:13px;color:#1a1a2e;margin-bottom:8px;font-weight:700;}
+        .btn-row{display:flex;gap:4px;flex-wrap:wrap;}
+        .btn{padding:8px 14px;border-radius:16px;border:none;cursor:pointer;font-size:10px;font-weight:600;}
+        .btn-primary{background:#1a1a2e;color:#fff;}
+        .btn-outline{background:#fff;color:#1a1a2e;border:1.5px solid #1a1a2e;}
+        .btn-danger{background:#e94560;color:#fff;}
+        .status-msg{font-size:9px;padding:5px 8px;border-radius:6px;text-align:center;display:none;margin-top:4px;}
+        .status-msg.success{background:#d4edda;color:#155724;display:block;}
+        .status-msg.error{background:#f8d7da;color:#721c24;display:block;}
+        .bottom-nav{display:flex;background:#fff;border-top:1px solid #e0dcd5;flex-shrink:0;}
+        .bottom-nav .nav-item{flex:1;text-align:center;padding:7px 0;cursor:pointer;font-size:8px;color:#999;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:1px;}
+        .bottom-nav .nav-item .nav-icon{font-size:16px;}
+        .bottom-nav .nav-item.active{color:#1a1a2e;font-weight:700;}
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:200;}
+        .modal-overlay.show{display:flex;}
+        .modal-content{background:#fff;border-radius:16px;padding:16px;width:320px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,0.3);max-height:75vh;overflow-y:auto;}
+        .modal-content h3{font-size:14px;margin-bottom:10px;}
+        .img-upload-area{width:100%;height:100px;border:2px dashed #ddd;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:8px;overflow:hidden;background:#fafafa;}
+        .img-upload-area img{width:100%;height:100%;object-fit:cover;}
+        .crop-container{position:relative;width:200px;height:200px;margin:10px auto;overflow:hidden;border-radius:50%;}
+        .crop-container img{position:absolute;max-width:none;cursor:move;}
+        .dark-mode .screen{background:#111;}
+        .dark-mode .page{background:#111;}
+        .dark-mode .npc-card{background:#1a1a1a;}
+        .dark-mode .chat-messages{background:#111;}
+        .dark-mode .chat-bubble.his{background:#1a1a2e;color:#ddd;}
+        .dark-mode .settings-card{background:#1a1a1a;color:#ddd;}
+        .dark-mode .bottom-nav{background:#1a1a1a;border-top-color:#222;}
+        .dark-mode .chat-input-area{background:#1a1a1a;border-top-color:#222;}
+        .dark-mode .chat-input-area input{background:#222;color:#ddd;border-color:#333;}
+        .dark-mode .modal-content{background:#1a1a1a;color:#ddd;}
+        .dark-mode .overlay-page{background:#111;}
+        @media(min-width:768px){.phone-container{width:420px;height:800px;}.npc-card{width:calc(33.33% - 7px);}}
+        @media(max-width:420px){.phone-container{width:100vw;height:100vh;border-radius:0;padding:0;box-shadow:none;}.screen{border-radius:0;}body{padding:0;}}
+    </style>
+</head>
+<body>
+    <div class="phone-container" id="phoneContainer">
+        <div class="screen">
+            <div class="dynamic-island" id="dynamicIsland">
+                <span class="island-icon">🎵</span><span class="island-text" id="islandText">未在播放</span>
+                <span class="island-close" id="islandClose">✕</span>
+                <div class="island-music" id="islandMusic">
+                    <input type="text" id="musicUrlInput" placeholder="音乐链接">
+                    <input type="text" id="musicTitleInput" placeholder="歌曲名">
+                    <div class="music-controls"><button class="music-btn" id="playMusicBtn">▶</button><button class="music-btn" id="pauseMusicBtn">⏸</button><button class="music-btn" id="shareMusicBtn">📤</button></div>
+                </div>
+                <div class="music-now-playing" id="nowPlaying">未在播放</div>
+            </div>
+            <div class="status-bar"><span class="time" id="statusTime">9:41</span><div class="status-icons"><span>信号</span><span>WiFi</span><span>电池</span></div></div>
+            <div class="top-nav">
+                <button class="back-btn" id="backBtn">←</button>
+                <span class="title" id="pageTitle">登录</span>
+                <div class="nav-right"><button class="bell-btn" id="bellBtn">🔔<span class="badge" id="bellBadge">0</span></button><button class="nav-btn" id="logoutBtn" style="display:none">🚪</button></div>
+            </div>
+            <div class="page-container" id="pageContainer">
+                <div class="page active" id="loginPage"><div class="login-container"><h2>登录 / 注册</h2><input type="email" id="loginEmail" placeholder="邮箱"><input type="password" id="loginPassword" placeholder="密码"><button class="login-btn" id="loginBtn">登 录</button><span class="toggle-text" id="toggleRegister">没有账号？点击注册</span><span class="toggle-text" id="toggleLogin" style="display:none">已有账号？点击登录</span><div class="status-msg" id="loginStatus"></div></div></div>
+                <div class="page hidden" id="homePage"><div class="search-box"><input type="text" id="searchNpcInput" placeholder="搜索角色"></div><div class="sort-bar" id="sortBar"><span class="active" data-sort="hot">热度</span><span data-sort="new">最新</span><span data-sort="chat">互动</span></div><div class="tag-filter-bar" id="tagFilterBar"><div class="tag-chip active" data-tag="">全部</div></div><div class="npc-card-list" id="npcCardList"></div></div>
+                <div class="page hidden" id="chatPage"><div class="mask-switch-bar" id="maskSwitchBarChat"></div><div class="chat-messages" id="chatMessages"></div><div class="chat-input-area"><button class="mini-btn" id="plusMenuBtn">➕</button><input type="text" id="chatInput" placeholder="说点什么" maxlength="800"><button class="send-btn" id="chatSendBtn">➤</button><div class="plus-menu" id="plusMenu"><button class="plus-item" id="emojiBtn">表情包</button><button class="plus-item" id="transferBtn">转账</button><button class="plus-item" id="locationBtn">定位</button><button class="plus-item" id="redPacketBtn">红包</button><button class="plus-item" id="extraBtn">番外</button></div></div></div>
+                <div class="page hidden" id="userPage"><div class="role-detail-scroll" id="userPageScroll"></div></div>
+                <div class="page hidden" id="momentsPage"><div class="moments-feed" id="momentsFeed"></div><div class="user-moment-input"><input type="text" id="userMomentInput" placeholder="分享朋友圈" maxlength="300"><button id="userMomentBtn">发布</button></div></div>
+                <div class="page hidden" id="savesPage"><div style="padding:14px;overflow-y:auto;flex:1" id="savesContent"></div></div>
+                <div class="page hidden" id="settingsPage"><div class="settings-page" id="settingsContent"></div></div>
+            </div>
+            <div class="bottom-nav" id="bottomNav" style="display:none">
+                <button class="nav-item active" data-page="home"><span class="nav-icon">🏠</span>广场</button>
+                <button class="nav-item" data-page="chat"><span class="nav-icon">💬</span>聊天</button>
+                <button class="nav-item" data-page="user"><span class="nav-icon">👤</span>我的</button>
+                <button class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span>设置</button>
+            </div>
+            <div class="overlay-page" id="detailOverlay"><div class="role-detail-scroll" id="roleDetailScroll"></div></div>
+        <div class="overlay-page" id="createNpcOverlay"><div style="padding:14px;overflow-y:auto;flex:1"><h3>创建新角色</h3>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createInfo">角色信息 <span>▶</span></div><div class="collapse-body" id="createInfo"><label>名称</label><input type="text" id="createNpcName" placeholder="角色名称"><label>性别</label><input type="text" id="createNpcGender" placeholder="性别"></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createBase">基础类别 <span>▶</span></div><div class="collapse-body" id="createBase"><label>是否无限制</label><select id="createNpcUnlimited"><option value="0">否</option><option value="1">是</option></select><label>是否为AI</label><select id="createNpcIsAI"><option value="0">否</option><option value="1">是</option></select></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createContent">内容类型 <span>▶</span></div><div class="collapse-body" id="createContent"><select id="createNpcContentType"><option value="original">原创</option><option value="self">自设</option><option value="fanfic">同人</option></select></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createImg">角色图片 <span>▶</span></div><div class="collapse-body" id="createImg"><p style="font-size:9px;color:#888">建议9:16或3:4图片</p><label>封面大图</label><div class="img-upload-area" id="createCoverUpload"><span class="upload-text">点击上传封面图</span></div><input type="file" id="createCoverFile" accept="image/*" style="display:none"><label>头像</label><div class="img-upload-area" id="createAvatarUpload"><span class="upload-text">点击上传头像</span></div><input type="file" id="createAvatarFile" accept="image/*" style="display:none"></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createTags">角色标签 <span>▶</span></div><div class="collapse-body" id="createTags"><input type="text" id="createNpcTags" placeholder="甜宠,霸总,古风"></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createIntro">角色介绍 <span>▶</span></div><div class="collapse-body" id="createIntro"><textarea id="createNpcIntro" rows="4" placeholder="给用户看的简介"></textarea></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createVis">角色可见性 <span>▶</span></div><div class="collapse-body" id="createVis"><select id="createNpcVisibility"><option value="link">限制:仅链接分享</option><option value="private">私密:仅自己</option><option value="public">公开:所有人</option></select></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createSetting">角色设定 <span>▶</span></div><div class="collapse-body" id="createSetting"><label>人设</label><textarea id="createNpcPersona" rows="6" placeholder="详细人设"></textarea><label>逆境处理</label><textarea id="createNpcAdversity" rows="4" placeholder="遇到事情时的举动"></textarea></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createCSS">全局美化 <span>▶</span></div><div class="collapse-body" id="createCSS"><textarea id="createNpcCSS" rows="6" placeholder="CSS代码"></textarea></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createWidget">小剧场 <span>▶</span></div><div class="collapse-body" id="createWidget"><textarea id="createNpcWidget" rows="6" placeholder="HTML代码"></textarea></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createOpening">开场设计 <span>▶</span></div><div class="collapse-body" id="createOpening"><textarea id="createNpcOpening" rows="6" placeholder="开场白"></textarea></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createCognition">默认认知 <span>▶</span></div><div class="collapse-body" id="createCognition"><textarea id="createNpcCognition" rows="5" placeholder="默认认知"></textarea></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createPlot">情节设定 <span>▶</span></div><div class="collapse-body" id="createPlot"><div id="createPlotList"></div><button class="btn btn-outline" id="addCreatePlotBtn" style="font-size:10px">+ 添加情节</button></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createOutput">输出设定 <span>▶</span></div><div class="collapse-body" id="createOutput"><textarea id="createNpcOutput" rows="6" placeholder="输出规则"></textarea></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createSample">样例对话和文风 <span>▶</span></div><div class="collapse-body" id="createSample"><textarea id="createNpcSample" rows="6" placeholder="文风参考"></textarea></div></div>
+        <div class="edit-section-collapse"><div class="collapse-header" data-target="createFiles">资料库 <span>▶</span></div><div class="collapse-body" id="createFiles"><input type="file" id="createNpcFiles" multiple accept=".txt,.json,.md"><p style="font-size:9px;color:#888">可上传文本文件</p><div id="createFileList" style="font-size:10px;color:#666"></div></div></div>
+        <div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" id="confirmCreateBtn">创建角色</button><button class="btn btn-outline" id="cancelCreateBtn">取消</button></div></div></div>
+        <div class="overlay-page" id="editNpcOverlay"><div style="padding:14px;overflow-y:auto;flex:1" id="editNpcInner"></div></div>
+        <div class="overlay-page" id="notifOverlay"><div style="padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><button class="back-btn" id="notifBackBtn" style="display:flex;width:28px;height:28px;font-size:14px">←</button><h3 style="flex:1">消息通知</h3><button class="btn btn-outline" id="markAllReadBtn" style="font-size:10px">全部已读</button></div><div id="notifList" style="flex:1;overflow-y:auto"></div></div></div>
+        <div class="overlay-page" id="adminOverlay"><div style="padding:14px;overflow-y:auto;flex:1" id="adminInner"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><button class="back-btn" id="adminBackBtn" style="display:flex;width:28px;height:28px;font-size:14px">←</button><h3 style="flex:1">审核管理</h3></div><div id="adminContent"></div></div></div>
+    </div>
+</div>
+<div class="modal-overlay" id="emojiModal"><div class="modal-content"><h3>表情包</h3><input type="text" id="emojiUrl" placeholder="图片链接"><input type="text" id="emojiDesc" placeholder="图片描述"><div class="btn-row"><button class="btn btn-primary" id="addEmojiBtn">发送</button><button class="btn btn-outline" id="closeEmojiBtn">取消</button></div></div></div>
+<div class="modal-overlay" id="transferModal"><div class="modal-content"><h3>转账</h3><input type="number" id="transferAmount" placeholder="金额"><input type="text" id="transferNote" placeholder="说明"><div class="btn-row"><button class="btn btn-primary" id="confirmTransferBtn">转账</button><button class="btn btn-outline" id="closeTransferBtn">取消</button></div></div></div>
+<div class="modal-overlay" id="locationModal"><div class="modal-content"><h3>定位</h3><input type="text" id="locationName" placeholder="地点"><div class="btn-row"><button class="btn btn-outline" id="getRealLocationBtn">实时</button><button class="btn btn-primary" id="confirmLocationBtn">发送</button><button class="btn btn-outline" id="closeLocationBtn">取消</button></div></div></div>
+<div class="modal-overlay" id="redPacketModal"><div class="modal-content"><h3>红包</h3><input type="number" id="redPacketAmount" placeholder="金额"><input type="text" id="redPacketNote" placeholder="祝福语"><div class="btn-row"><button class="btn btn-primary" id="confirmRedPacketBtn">塞钱</button><button class="btn btn-outline" id="closeRedPacketBtn">取消</button></div></div></div>
+<div class="modal-overlay" id="extraModal"><div class="modal-content"><h3>番外存档</h3><div id="extraList" style="max-height:180px;overflow-y:auto"></div><input type="text" id="extraNameInput" placeholder="名称"><textarea id="extraContentInput" placeholder="内容" rows="2"></textarea><div class="btn-row"><button class="btn btn-primary" id="addExtraBtn">保存</button><button class="btn btn-outline" id="closeExtraBtn">关闭</button></div></div></div>
+<div class="modal-overlay" id="saveModal"><div class="modal-content"><h3>存档</h3><input type="text" id="saveNameInput" placeholder="名称"><div class="btn-row"><button class="btn btn-primary" id="confirmSaveBtn">保存</button><button class="btn btn-outline" id="closeSaveBtn">取消</button></div></div></div>
+<div class="modal-overlay" id="maskModal"><div class="modal-content"><h3>面具</h3><input type="text" id="maskName" placeholder="名称"><input type="text" id="maskGender" placeholder="性别"><input type="text" id="maskPersona" placeholder="人设"><input type="text" id="maskHobby" placeholder="爱好"><textarea id="maskCommand" placeholder="指令" rows="2"></textarea><div class="btn-row"><button class="btn btn-primary" id="saveMaskBtn">保存</button><button class="btn btn-danger" id="deleteMaskBtn">删除</button><button class="btn btn-outline" id="closeMaskBtn">取消</button></div></div></div>
+<div class="modal-overlay" id="cropModal"><div class="modal-content"><h3>裁剪头像</h3><div class="crop-container" id="cropContainer"><img id="cropImage" alt=""></div><input type="range" id="cropZoom" min="50" max="200" value="100"><div class="btn-row"><button class="btn btn-primary" id="confirmCropBtn">确认</button><button class="btn btn-outline" id="cancelCropBtn">取消</button></div></div></div>
+<div class="modal-overlay" id="shareModal"><div class="modal-content"><h3>分享</h3><input type="text" id="shareLink" readonly><div class="btn-row"><button class="btn btn-primary" id="copyShareLinkBtn">复制链接</button><button class="btn btn-outline" id="closeShareBtn">关闭</button></div></div></div>
+<div class="modal-overlay" id="announceModal"><div class="modal-content"><h3>发布公告</h3><textarea id="announceContent" placeholder="公告内容" rows="4"></textarea><div class="btn-row"><button class="btn btn-primary" id="sendAnnounceBtn">发送</button><button class="btn btn-outline" id="closeAnnounceBtn">取消</button></div></div></div>
+<div class="modal-overlay" id="welfareModal"><div class="modal-content"><h3>发放福利</h3><textarea id="welfareContent" placeholder="福利内容" rows="4"></textarea><div class="btn-row"><button class="btn btn-primary" id="sendWelfareBtn">发送福利</button><button class="btn btn-outline" id="closeWelfareBtn">取消</button></div></div></div>
+<div class="modal-overlay" id="banModal"><div class="modal-content"><h3>封禁用户</h3><input type="text" id="banEmailInput" placeholder="用户邮箱"><div class="btn-row"><button class="btn btn-danger" id="confirmBanBtn">封禁</button><button class="btn btn-outline" id="confirmUnbanBtn">解封</button><button class="btn btn-outline" id="closeBanBtn">取消</button></div></div></div>
+<div class="modal-overlay" id="userEditModal"><div class="modal-content"><h3>编辑个人资料</h3><label>头像链接</label><input type="text" id="editUserAvatar" placeholder="头像图片链接"><label>背景图链接</label><input type="text" id="editUserBg" placeholder="背景图片链接"><label>昵称</label><input type="text" id="editUserName" placeholder="昵称"><label>简介</label><textarea id="editUserBio" placeholder="个人简介" rows="2"></textarea><div class="btn-row"><button class="btn btn-primary" id="saveUserEditBtn">保存</button><button class="btn btn-outline" id="closeUserEditBtn">取消</button></div></div></div>
+<div class="modal-overlay" id="reviewDetailModal"><div class="modal-content" id="reviewDetailContent"></div></div>
+<div class="modal-overlay" id="fanLevelModal"><div class="modal-content"><h3>粉丝团灯牌设定</h3><div id="fanLevelList"></div><div style="display:flex;gap:4px;margin-top:8px"><input type="text" id="newLevelName" placeholder="灯牌名称"><input type="number" id="newLevelCost" placeholder="所需粉包"><button class="btn btn-primary" id="addFanLevelBtn">添加</button></div><div class="btn-row" style="margin-top:8px"><button class="btn btn-primary" id="saveFanLevelsBtn">保存</button><button class="btn btn-outline" id="closeFanLevelBtn">关闭</button></div></div></div>
+<script>
+(function(){
+    var $=function(s){return document.getElementById(s);};
+    var chatMessages=$('chatMessages'),chatInput=$('chatInput'),chatSendBtn=$('chatSendBtn');
+    var pageTitle=$('pageTitle'),statusTime=$('statusTime'),backBtn=$('backBtn');
+    var dynamicIsland=$('dynamicIsland'),islandText=$('islandText'),nowPlaying=$('nowPlaying');
+    var bottomNav=$('bottomNav'),bellBtn=$('bellBtn'),bellBadge=$('bellBadge');
+    var momentsFeed=$('momentsFeed'),userMomentInput=$('userMomentInput'),userMomentBtn=$('userMomentBtn');
+    var pages={login:$('loginPage'),home:$('homePage'),chat:$('chatPage'),user:$('userPage'),moments:$('momentsPage'),saves:$('savesPage'),settings:$('settingsPage')};
+    var ADMIN_EMAIL='195794649@qq.com';
+    var currentUser=null,allData={};
+    var settings={apiGroups:[{url:'',key:'',model:''},{url:'',key:'',model:''},{url:'',key:'',model:''}],activeApiGroup:0,npcs:[],activeNpcId:null,masks:[],activeMaskId:null,extras:[],chatBg:'#f5f5f0',darkMode:false,bgImage:'',bgBlur:0,bgBrightness:100};
+    var saves={},currentPage='login',isGenerating=false;
+    var audioPlayer=null,currentMusicUrl='',currentMusicTitle='',isRegisterMode=false;
+    var cropData={scale:1,targetId:''};
+    var createCoverData=null,createAvatarData=null,editCoverData=null,editAvatarData=null;
+    var createPlotCount=0,createFileContents=[];
+    function updateTime(){var n=new Date();statusTime.textContent=('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2);}
+    function hashPassword(pw){var h=0;for(var i=0;i<pw.length;i++){h=((h<<5)-h)+pw.charCodeAt(i);h|=0;}return'h_'+Math.abs(h).toString(36);}
+    function loadAllData(){try{var d=localStorage.getItem('ai_platform_v1');if(d)allData=JSON.parse(d);}catch(e){allData={};}if(!allData.users)allData.users={};if(!allData.npcs)allData.npcs=[];if(!allData.creators)allData.creators={};if(!allData.notifs)allData.notifs={};if(!allData.announcements)allData.announcements=[];if(!allData.banned)allData.banned={};if(!allData.fanClubs)allData.fanClubs={};if(!allData.userFans)allData.userFans={};}
+    function saveAllData(){try{localStorage.setItem('ai_platform_v1',JSON.stringify(allData));}catch(e){}}
+    function getUserKey(){return currentUser?currentUser.email:'';}
+    function isAdmin(){return currentUser&&currentUser.email===ADMIN_EMAIL;}
+    function isBanned(email){return allData.banned&&allData.banned[email];}
+    function saveLoginState(email){localStorage.setItem('ai_platform_login',JSON.stringify({email:email,time:Date.now()}));}
+    function clearLoginState(){localStorage.removeItem('ai_platform_login');}
+    function getLoginState(){try{var s=localStorage.getItem('ai_platform_login');if(s)return JSON.parse(s);}catch(e){}return null;}
+    function escapeHtml(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+    function showStatus(id,msg,type){var el=$(id);if(!el)return;el.textContent=msg;el.className='status-msg '+type;setTimeout(function(){el.className='status-msg';el.textContent='';},4000);}
+    function formatTime(ts){var d=Date.now()-ts;if(d<60000)return'刚刚';if(d<3600000)return Math.floor(d/60000)+'分钟前';if(d<86400000)return Math.floor(d/3600000)+'小时前';return new Date(ts).toLocaleDateString();}
+    function getUserFans(email){if(!allData.userFans[email])allData.userFans[email]={following:[],fanClub:{},chatCount:0,powder:0};return allData.userFans[email];}
+    function getCreatorFanClub(email){if(!allData.fanClubs[email])allData.fanClubs[email]={levels:[{name:'初级粉丝',cost:10},{name:'铁杆粉丝',cost:50},{name:'钻石粉丝',cost:200}]};return allData.fanClubs[email];}
+  function autoLogin(){
+    var loginState=getLoginState();if(!loginState||!loginState.email)return;
+    var email=loginState.email;if(!allData.users[email]){clearLoginState();return;}if(isBanned(email))return;
+    currentUser={email:email};loadUserSettings();
+    $('loginPage').classList.add('hidden');$('loginPage').classList.remove('active');
+    bottomNav.style.display='flex';$('logoutBtn').style.display='block';bellBtn.style.display='flex';updateBellBadge();
+    if(settings.darkMode)document.getElementById('phoneContainer').classList.add('dark-mode');
+    switchPage('home');renderAll();
+}
+function loadUserSettings(){var key=getUserKey();if(!key)return;if(!allData.userSettings)allData.userSettings={};if(allData.userSettings[key]){settings=Object.assign(settings,allData.userSettings[key]);}else{allData.userSettings[key]={apiGroups:settings.apiGroups,activeApiGroup:0,masks:[],activeMaskId:null,extras:[],chatBg:'#f5f5f0',darkMode:false,bgImage:'',bgBlur:0,bgBrightness:100};saveAllData();}if(settings.masks.length===0){settings.masks.push({id:'mask_'+Date.now(),name:'我',gender:'',persona:'',hobby:'',command:''});settings.activeMaskId=settings.masks[0].id;}settings.npcs=allData.npcs||[];}
+function saveUserSettings(){var key=getUserKey();if(!key)return;if(!allData.userSettings)allData.userSettings={};allData.userSettings[key]={apiGroups:settings.apiGroups,activeApiGroup:settings.activeApiGroup,masks:settings.masks,activeMaskId:settings.activeMaskId,extras:settings.extras,chatBg:settings.chatBg,darkMode:settings.darkMode,bgImage:settings.bgImage,bgBlur:settings.bgBlur,bgBrightness:settings.bgBrightness};saveAllData();}
+function getActiveNpc(){return settings.npcs.find(function(n){return n.id===settings.activeNpcId;})||null;}
+function getActiveMask(){return settings.masks.find(function(m){return m.id===settings.activeMaskId;})||null;}
+function getActiveApi(){return settings.apiGroups[settings.activeApiGroup]||settings.apiGroups[0];}
+function addNotif(toEmail,type,data){if(!allData.notifs[toEmail])allData.notifs[toEmail]=[];allData.notifs[toEmail].unshift({type:type,data:data,time:Date.now(),read:false});saveAllData();updateBellBadge();}
+function getNotifs(email){return allData.notifs[email]||[];}
+function getUnreadCount(email){return getNotifs(email).filter(function(n){return!n.read;}).length;}
+function updateBellBadge(){if(!currentUser)return;var count=getUnreadCount(currentUser.email);bellBadge.textContent=count>99?'99+':count;if(count>0){bellBadge.classList.add('show');}else{bellBadge.classList.remove('show');}}
+function markAllRead(){if(!currentUser)return;var notifs=getNotifs(currentUser.email);notifs.forEach(function(n){n.read=true;});allData.notifs[currentUser.email]=notifs;saveAllData();updateBellBadge();}
+function renderNotifs(){var list=$('notifList');if(!list||!currentUser)return;var notifs=getNotifs(currentUser.email);var announces=allData.announcements||[];list.innerHTML='';if(notifs.length===0&&announces.length===0){list.innerHTML='<p style="color:#999;text-align:center">暂无消息</p>';}else{announces.slice(0,5).forEach(function(a){list.innerHTML+='<div class="notif-item" style="background:#fff9e6"><div class="notif-icon">📢</div><div class="notif-content"><b>官方公告</b><br>'+escapeHtml(a.content)+'</div><div class="notif-time">'+formatTime(a.time)+'</div></div>';});notifs.forEach(function(n){var icon=n.type==='fav'?'❤️':n.type==='comment'?'💬':n.type==='welfare'?'🎁':n.type==='reject'?'❌':'📢';var cls=n.read?'':'unread';list.innerHTML+='<div class="notif-item '+cls+'"><div class="notif-icon">'+icon+'</div><div class="notif-content">'+escapeHtml(n.data.text||'')+'</div><div class="notif-time">'+formatTime(n.time)+'</div></div>';});}}
+function doLogin(){
+    var email=$('loginEmail').value.trim().toLowerCase(),pw=$('loginPassword').value.trim();
+    if(!email||!pw){showStatus('loginStatus','请填写邮箱和密码','error');return;}
+    if(email.indexOf('@')===-1){showStatus('loginStatus','邮箱格式不正确','error');return;}
+    if(isBanned(email)){showStatus('loginStatus','此账号已被封禁','error');return;}
+    var hpw=hashPassword(pw);
+    if(isRegisterMode){if(allData.users[email]){showStatus('loginStatus','该邮箱已注册','error');return;}allData.users[email]={password:hpw,createdAt:Date.now()};if(!allData.creators[email])allData.creators[email]={name:email.split('@')[0],bio:'',level:1,avatar:'',bg:'',frame:'',widget:'',createdNpcs:[]};saveAllData();showStatus('loginStatus','注册成功！请登录','success');isRegisterMode=false;$('toggleRegister').style.display='inline';$('toggleLogin').style.display='none';$('loginBtn').textContent='登 录';return;}
+    if(!allData.users[email]){showStatus('loginStatus','账号不存在','error');return;}
+    if(allData.users[email].password!==hpw){showStatus('loginStatus','密码错误','error');return;}
+    currentUser={email:email};saveLoginState(email);loadUserSettings();
+    $('loginPage').classList.add('hidden');$('loginPage').classList.remove('active');bottomNav.style.display='flex';$('logoutBtn').style.display='block';bellBtn.style.display='flex';updateBellBadge();
+    if(settings.darkMode)document.getElementById('phoneContainer').classList.add('dark-mode');
+    switchPage('home');renderAll();
+}
+function doLogout(){if(confirm('确定退出？')){currentUser=null;clearLoginState();settings.activeNpcId=null;bellBtn.style.display='none';bottomNav.style.display='none';$('logoutBtn').style.display='none';backBtn.style.display='none';Object.keys(pages).forEach(function(k){pages[k].classList.add('hidden');pages[k].classList.remove('active');});$('loginPage').classList.remove('hidden');$('loginPage').classList.add('active');pageTitle.textContent='登录';}}
+function switchPage(p){currentPage=p;Object.keys(pages).forEach(function(k){if(pages[k]){pages[k].classList.toggle('hidden',k!==p);pages[k].classList.toggle('active',k===p);}});var navItems=document.querySelectorAll('.bottom-nav .nav-item');navItems.forEach(function(item){item.classList.toggle('active',item.dataset.page===p);});backBtn.style.display=(p==='home'||p==='login')?'none':'flex';var titles={home:'角色广场',chat:getActiveNpc()?getActiveNpc().name:'聊天',user:'我的主页',moments:'朋友圈',saves:'存档',settings:'设置'};pageTitle.textContent=titles[p]||'';if(p==='home'){renderNpcCards();renderTagFilter();}if(p==='chat'){renderMaskSwitchBarChat();renderChatFromHistory();scrollChatBottom();}if(p==='user')renderUserPage();if(p==='moments')renderMoments();if(p==='saves')renderSaves();if(p==='settings')renderSettings();}
+function getCreatorInfo(email){if(!allData.creators[email])allData.creators[email]={name:email.split('@')[0],bio:'',level:1,avatar:'',bg:'',frame:'',widget:'',createdNpcs:[]};var c=allData.creators[email];var createdCount=(c.createdNpcs||[]).length;var totalFavs=allData.npcs.filter(function(n){return n.creator===email;}).reduce(function(s,n){return s+(n.favs||0);},0);var totalChats=allData.npcs.filter(function(n){return n.creator===email;}).reduce(function(s,n){return s+(n.chats||0);},0);var score=createdCount*10+totalFavs*2+totalChats;var level=1;if(score>500)level=5;else if(score>200)level=4;else if(score>100)level=3;else if(score>30)level=2;c.level=level;c.createdNpcs=allData.npcs.filter(function(n){return n.creator===email;}).map(function(n){return n.id;});allData.creators[email]=c;saveAllData();return c;}
+function renderAll(){if(!currentUser)return;if(currentPage==='home'){renderNpcCards();renderTagFilter();}}
+  function renderTagFilter(){
+    var bar=$('tagFilterBar');if(!bar)return;var allTags=new Set();
+    allData.npcs.filter(function(n){return n.approved&&(n.public||n.creator===getUserKey());}).forEach(function(n){if(n.tags)n.tags.forEach(function(t){allTags.add(t);});});
+    bar.innerHTML='<div class="tag-chip active" data-tag="">全部</div>';allTags.forEach(function(t){bar.innerHTML+='<div class="tag-chip" data-tag="'+escapeHtml(t)+'">'+escapeHtml(t)+'</div>';});
+    bar.querySelectorAll('.tag-chip').forEach(function(chip){chip.addEventListener('click',function(){bar.querySelectorAll('.tag-chip').forEach(function(c){c.classList.remove('active');});this.classList.add('active');renderNpcCards(this.dataset.tag);});});
+}
+function renderNpcCards(filterTag){
+    filterTag=filterTag||'';var key=getUserKey();
+    var allNpcs=allData.npcs.filter(function(n){return n.approved||n.creator===key;});
+    var publicNpcs=allNpcs.filter(function(n){return n.public||n.creator===key;});
+    var filtered=filterTag?publicNpcs.filter(function(n){return n.tags&&n.tags.indexOf(filterTag)!==-1;}):publicNpcs;
+    var searchText=$('searchNpcInput')?$('searchNpcInput').value.trim().toLowerCase():'';
+    if(searchText){filtered=filtered.filter(function(n){var nm=(n.name||'').toLowerCase().indexOf(searchText)!==-1;var tm=(n.tags||[]).some(function(t){return t.toLowerCase().indexOf(searchText)!==-1;});var dm=(n.intro||n.persona||'').toLowerCase().indexOf(searchText)!==-1;return nm||tm||dm;});}
+    var sortMode=(document.querySelector('#sortBar .active')||{}).dataset||{};sortMode=sortMode.sort||'hot';
+    if(sortMode==='hot')filtered.sort(function(a,b){return(b.favs||0)-(a.favs||0);});else if(sortMode==='new')filtered.sort(function(a,b){return(b.createdAt||0)-(a.createdAt||0);});else if(sortMode==='chat')filtered.sort(function(a,b){return(b.chats||0)-(a.chats||0);});
+    var list=$('npcCardList');if(!list)return;list.innerHTML='';
+    filtered.forEach(function(npc){var creator=getCreatorInfo(npc.creator||'');var card=document.createElement('div');card.className='npc-card';card.dataset.npcId=npc.id;card.innerHTML=(npc.image?'<img src="'+escapeHtml(npc.image)+'" class="npc-card-img" alt="">':'<div class="npc-card-img">🎭</div>')+(!npc.approved?'<div class="review-badge">审核中</div>':'')+'<div class="npc-card-info"><div class="npc-card-name">'+escapeHtml(npc.name||'未命名')+'</div><div class="npc-card-desc">'+escapeHtml((npc.intro||npc.persona||'').slice(0,25))+'</div><div class="npc-card-stats"><span>❤️'+(npc.favs||0)+'</span><span>💬'+(npc.chats||0)+'</span></div><div style="font-size:9px;color:#aaa">👤'+escapeHtml(creator.name)+' Lv'+creator.level+'</div></div>';card.addEventListener('click',function(){settings.activeNpcId=this.dataset.npcId;saveUserSettings();openDetailOverlay();});list.appendChild(card);});
+    if(key){var addCard=document.createElement('div');addCard.style.cssText='width:calc(50% - 5px);display:flex;align-items:center;justify-content:center;background:#f5f3ee;border:2px dashed #d0ccc5;border-radius:14px;min-height:180px;cursor:pointer';addCard.innerHTML='<span style="font-size:36px;color:#bbb">+</span>';addCard.addEventListener('click',openCreateOverlay);list.appendChild(addCard);}
+}
+function openDetailOverlay(){renderRoleDetail();$('detailOverlay').classList.add('show');backBtn.style.display='flex';pageTitle.textContent=getActiveNpc()?getActiveNpc().name:'角色详情';}
+function renderUserPage(){
+    var scroll=$('userPageScroll');if(!scroll||!currentUser)return;var key=getUserKey();var creator=getCreatorInfo(key);
+    scroll.innerHTML='';
+    var header=document.createElement('div');header.className='creator-profile-header';
+    header.innerHTML=(creator.bg?'<img src="'+escapeHtml(creator.bg)+'" alt="">':'<div style="width:100%;height:100%;background:#e8e4dc"></div>')+'<div class="creator-avatar">'+(creator.avatar?'<img src="'+escapeHtml(creator.avatar)+'" alt="">':'<div style="width:100%;height:100%;background:#ccc;display:flex;align-items:center;justify-content:center;font-size:24px">👤</div>')+'</div>'+(creator.frame?'<div class="avatar-frame"><img src="'+escapeHtml(creator.frame)+'" alt=""></div>':'');
+    scroll.appendChild(header);
+    var info=document.createElement('div');info.className='creator-info-section';
+    var uf=getUserFans(key);var isFollowing=uf.following.indexOf(key)!==-1;
+    info.innerHTML='<div style="display:flex;align-items:center"><span class="creator-name">'+escapeHtml(creator.name||key.split('@')[0])+'</span>'+(isAdmin()?'<span class="official-badge">官方</span>':'')+'<span class="creator-level">Lv'+creator.level+'</span><span class="fan-badge">粉包:'+uf.powder+'</span></div><div class="creator-bio">'+escapeHtml(creator.bio||'暂无简介')+'</div>'+(creator.widget?'<div class="creator-widget">'+creator.widget+'</div>':'')+'<div class="creator-actions"><button class="btn btn-outline" id="editProfileBtn" style="font-size:10px">编辑资料</button>'+(isAdmin()?'<button class="btn btn-primary" id="openAdminBtn" style="font-size:10px">审核管理</button>':'')+'</div>';
+    scroll.appendChild(info);
+    var fanPanel=document.createElement('div');fanPanel.className='fan-club-panel';
+    var fClub=getCreatorFanClub(key);var currentFanLevel='未加入';fClub.levels.forEach(function(l){if(uf.fanClub[key]&&uf.fanClub[key]>=l.cost)currentFanLevel=l.name;});
+    fanPanel.innerHTML='<h4>粉丝团灯牌: '+currentFanLevel+'</h4><p style="font-size:10px;color:#888">每对话10轮获得1个粉包</p>';
+    fClub.levels.forEach(function(l){fanPanel.innerHTML+='<div class="fan-level-item"><span class="level-name">'+escapeHtml(l.name)+'</span><span class="level-cost">'+l.cost+'粉包</span><button class="btn btn-outline upgrade-btn" data-cost="'+l.cost+'" style="font-size:9px">升级</button></div>';});
+    if(key===getUserKey()){fanPanel.innerHTML+='<button class="btn btn-outline" id="setFanLevelsBtn" style="font-size:10px;margin-top:6px">设定灯牌等级</button>';}
+    scroll.appendChild(fanPanel);
+    var myNpcs=allData.npcs.filter(function(n){return n.creator===key;});
+    var npcSection=document.createElement('div');npcSection.style.padding='14px';npcSection.innerHTML='<h4>我的角色 ('+myNpcs.length+')</h4>';
+    if(myNpcs.length===0){npcSection.innerHTML+='<p style="color:#999;text-align:center;padding:20px">还没有创建角色</p>';}
+    else{var grid=document.createElement('div');grid.style.cssText='display:flex;flex-wrap:wrap;gap:10px';myNpcs.forEach(function(npc){var card=document.createElement('div');card.className='npc-card';card.dataset.npcId=npc.id;card.innerHTML=(npc.image?'<img src="'+escapeHtml(npc.image)+'" class="npc-card-img" alt="">':'<div class="npc-card-img">🎭</div>')+(!npc.approved?'<div class="review-badge">审核中</div>':'')+'<div class="npc-card-info"><div class="npc-card-name">'+escapeHtml(npc.name)+'</div></div>';card.addEventListener('click',function(){settings.activeNpcId=this.dataset.npcId;saveUserSettings();openDetailOverlay();});grid.appendChild(card);});npcSection.appendChild(grid);}
+    scroll.appendChild(npcSection);
+    setTimeout(function(){$('editProfileBtn').addEventListener('click',function(){$('editUserAvatar').value=creator.avatar||'';$('editUserBg').value=creator.bg||'';$('editUserName').value=creator.name||'';$('editUserBio').value=creator.bio||'';$('userEditModal').classList.add('show');});if(isAdmin()){$('openAdminBtn').addEventListener('click',renderAdminPanel);}$('setFanLevelsBtn')?.addEventListener('click',openFanLevelModal);document.querySelectorAll('.upgrade-btn').forEach(function(b){b.addEventListener('click',function(){var cost=parseInt(this.dataset.cost);var uf=getUserFans(key);if(uf.powder>=cost){uf.powder-=cost;uf.fanClub[key]=cost;allData.userFans[key]=uf;saveAllData();renderUserPage();alert('升级成功！');}else{alert('粉包不足！');}});});},0);
+}
+  function renderAdminPanel(){
+    var content=$('adminContent');if(!content)return;
+    content.innerHTML='<div class="admin-panel"><h4>待审核角色</h4>';
+    var pending=allData.npcs.filter(function(n){return!n.approved;});
+    if(pending.length===0){content.innerHTML+='<p style="color:#999">暂无待审核角色</p>';}
+    else{pending.forEach(function(npc){content.innerHTML+='<div class="review-card"><div class="review-name">'+escapeHtml(npc.name)+'</div><div class="review-creator">创作者: '+escapeHtml(npc.creator||'未知')+'</div><div class="btn-row" style="margin-top:4px"><button class="btn btn-outline view-detail-btn" data-nid="'+npc.id+'" style="font-size:9px">查看详情</button><button class="btn btn-primary approve-btn" data-nid="'+npc.id+'" style="font-size:9px">通过</button><button class="btn btn-danger reject-btn" data-nid="'+npc.id+'" style="font-size:9px">拒绝</button></div></div>';});}
+    content.innerHTML+='</div><div class="admin-panel"><h4>封禁管理</h4><button class="btn btn-danger" id="openBanBtn">封禁/解封用户</button></div><div class="admin-panel"><h4>公告与福利</h4><button class="btn btn-outline" id="adminAnnounceBtn">发布公告</button> <button class="btn btn-outline" id="adminWelfareBtn">发放福利</button></div>';
+    $('adminOverlay').classList.add('show');
+    setTimeout(function(){
+        content.querySelectorAll('.view-detail-btn').forEach(function(b){b.addEventListener('click',function(){var n=allData.npcs.find(function(x){return x.id===b.dataset.nid;});if(n)openReviewDetail(n);});});
+        content.querySelectorAll('.approve-btn').forEach(function(b){b.addEventListener('click',function(){var n=allData.npcs.find(function(x){return x.id===b.dataset.nid;});if(n){n.approved=true;saveAllData();addNotif(n.creator,'comment',{text:'你的角色「'+n.name+'」已通过审核！'});renderAdminPanel();}});});
+        content.querySelectorAll('.reject-btn').forEach(function(b){b.addEventListener('click',function(){var n=allData.npcs.find(function(x){return x.id===b.dataset.nid;});if(n){var reason=prompt('请输入拒绝原因（可选）：');n.approved=false;n.public=false;n.visibility='private';saveAllData();addNotif(n.creator,'reject',{text:'你的角色「'+n.name+'」未通过审核。'+(reason?'原因：'+reason:'')});renderAdminPanel();}});});
+        content.querySelector('#openBanBtn').addEventListener('click',function(){$('banModal').classList.add('show');});
+        content.querySelector('#adminAnnounceBtn').addEventListener('click',function(){$('announceModal').classList.add('show');});
+        content.querySelector('#adminWelfareBtn').addEventListener('click',function(){$('welfareModal').classList.add('show');});
+    },0);
+}
+function openReviewDetail(npc){
+    var c=$('reviewDetailContent');if(!c)return;
+    c.innerHTML='<h3>审核: '+escapeHtml(npc.name)+'</h3>';
+    var fields=['name','gender','unlimited','isAI','contentType','intro','persona','adversity','opening','cognition','outputRule','sample'];
+    var labels={'name':'名称','gender':'性别','intro':'介绍','persona':'人设','adversity':'逆境处理','opening':'开场','cognition':'默认认知','outputRule':'输出设定','sample':'文风'};
+    fields.forEach(function(f){if(npc[f]!==undefined&&npc[f]!==null&&npc[f]!==''){c.innerHTML+='<div class="review-card"><b>'+ (labels[f]||f) +':</b><br>'+escapeHtml(String(npc[f])).replace(/\n/g,'<br>')+'</div>';}});
+    if(npc.tags&&npc.tags.length>0)c.innerHTML+='<div class="review-card"><b>标签:</b> '+escapeHtml(npc.tags.join(', '))+'</div>';
+    c.innerHTML+='<div class="btn-row"><button class="btn btn-primary" id="approveDetailBtn">通过</button><button class="btn btn-danger" id="rejectDetailBtn">拒绝</button><button class="btn btn-outline" id="closeReviewBtn">关闭</button></div>';
+    $('reviewDetailModal').classList.add('show');
+    $('approveDetailBtn').addEventListener('click',function(){npc.approved=true;saveAllData();addNotif(npc.creator,'comment',{text:'你的角色「'+npc.name+'」已通过审核！'});$('reviewDetailModal').classList.remove('show');renderAdminPanel();});
+    $('rejectDetailBtn').addEventListener('click',function(){var reason=prompt('请输入拒绝原因：');npc.approved=false;npc.public=false;npc.visibility='private';saveAllData();addNotif(npc.creator,'reject',{text:'你的角色「'+npc.name+'」未通过审核。'+(reason?'原因：'+reason:'')});$('reviewDetailModal').classList.remove('show');renderAdminPanel();});
+    $('closeReviewBtn').addEventListener('click',function(){$('reviewDetailModal').classList.remove('show');});
+}
+function openFanLevelModal(){
+    var list=$('fanLevelList');if(!list)return;var fClub=getCreatorFanClub(getUserKey());
+    list.innerHTML='';fClub.levels.forEach(function(l,i){list.innerHTML+='<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px"><span style="flex:1">'+escapeHtml(l.name)+'</span><span>'+l.cost+'粉包</span><button class="btn btn-danger del-level-btn" data-idx="'+i+'" style="font-size:9px">删除</button></div>';});
+    $('fanLevelModal').classList.add('show');
+    list.querySelectorAll('.del-level-btn').forEach(function(b){b.addEventListener('click',function(){fClub.levels.splice(parseInt(this.dataset.idx),1);allData.fanClubs[getUserKey()]=fClub;saveAllData();openFanLevelModal();});});
+    $('addFanLevelBtn').onclick=function(){var n=$('newLevelName').value.trim();var c=parseInt($('newLevelCost').value);if(!n||!c)return;fClub.levels.push({name:n,cost:c});allData.fanClubs[getUserKey()]=fClub;saveAllData();$('newLevelName').value='';$('newLevelCost').value='';openFanLevelModal();};
+    $('saveFanLevelsBtn').onclick=function(){saveAllData();$('fanLevelModal').classList.remove('show');alert('已保存！');};
+    $('closeFanLevelBtn').onclick=function(){$('fanLevelModal').classList.remove('show');};
+}
+  function renderRoleDetail(){
+    var npc=getActiveNpc();if(!npc){closeDetailOverlay();return;}var creator=getCreatorInfo(npc.creator||''),key=getUserKey();var scroll=$('roleDetailScroll');if(!scroll)return;
+    if(npc.visibility==='private'&&npc.creator!==key){scroll.innerHTML='<div style="text-align:center;padding:40px"><p>🔒 私密角色</p></div>';return;}
+    if(!npc.public&&npc.visibility!=='private'&&npc.creator!==key){scroll.innerHTML='<div style="text-align:center;padding:40px"><p>🔒 仅链接访问</p></div>';return;}
+    var comments=npc.comments||[];
+    scroll.innerHTML='';var cd=document.createElement('div');cd.className='role-cover';cd.innerHTML=(npc.image?'<img src="'+escapeHtml(npc.image)+'" alt="">':'<div style="width:100%;height:100%;background:#e8e4dc;display:flex;align-items:center;justify-content:center;font-size:50px">🎭</div>')+'<div class="cover-btns">'+(npc.creator===key?'<button class="cover-btn" id="editRoleBtn">编辑</button>':'')+'<button class="cover-btn" id="shareRoleBtn">分享</button><button class="cover-btn" id="chatRoleBtn">聊天</button>'+(key?'<button class="cover-btn" id="favRoleBtn">'+((npc.favUsers||[]).indexOf(key)!==-1?'❤️':'🤍')+'</button>':'')+'</div>';scroll.appendChild(cd);
+    var idiv=document.createElement('div');idiv.className='role-info-section';idiv.innerHTML='<div class="role-name">'+escapeHtml(npc.name)+'</div><div class="creator-row" style="display:flex;align-items:center;gap:6px;margin:4px 0;font-size:11px;color:#888">👤 '+escapeHtml(creator.name)+' <span class="creator-level">Lv'+creator.level+'</span></div><div class="role-stats" style="display:flex;gap:16px;font-size:12px;color:#666;margin:6px 0"><span>❤️ '+(npc.favs||0)+'</span><span>💬 '+(npc.chats||0)+'</span></div>';scroll.appendChild(idiv);
+    var cs=document.createElement('div');cs.className='comment-section';cs.innerHTML='<h4>评论区</h4>';
+    comments.slice(0,20).forEach(function(c){cs.innerHTML+='<div class="comment-item"><div class="comment-header"><div class="comment-avatar">'+escapeHtml(c.author.charAt(0))+'</div><div class="comment-name">'+escapeHtml(c.author)+'</div></div><div class="comment-text">'+escapeHtml(c.text)+'</div></div>';});scroll.appendChild(cs);
+    renderMaskSwitchBarDetail(cs);
+    setTimeout(function(){scroll.querySelector('#editRoleBtn')?.addEventListener('click',function(){openEditOverlay(npc);});scroll.querySelector('#shareRoleBtn').addEventListener('click',function(){$('shareLink').value=location.origin+location.pathname+'?npc='+npc.id;$('shareModal').classList.add('show');});scroll.querySelector('#chatRoleBtn').addEventListener('click',function(){closeDetailOverlay();switchPage('chat');});scroll.querySelector('#favRoleBtn')?.addEventListener('click',function(){toggleFav(npc);});},0);
+}
+function closeDetailOverlay(){$('detailOverlay').classList.remove('show');backBtn.style.display='none';pageTitle.textContent='角色广场';}
+function toggleFav(npc){var key=getUserKey();if(!key)return;if(!npc.favUsers)npc.favUsers=[];if(!npc.favs)npc.favs=0;var idx=npc.favUsers.indexOf(key);if(idx!==-1){npc.favUsers.splice(idx,1);npc.favs=Math.max(0,npc.favs-1);}else{npc.favUsers.push(key);npc.favs++;if(npc.creator!==key)addNotif(npc.creator,'fav',{text:key+' 收藏了你的角色'});}saveAllData();renderRoleDetail();}
+function renderMaskSwitchBarDetail(cs){var bar=document.createElement('div');bar.className='mask-switch-bar';settings.masks.forEach(function(m){bar.innerHTML+='<div class="mask-chip'+(m.id===settings.activeMaskId?' active':'')+'" data-mid="'+m.id+'">'+escapeHtml(m.name)+'</div>';});bar.innerHTML+='<button class="mini-btn" id="addMaskDetailBtn">+面具</button>';cs.insertBefore(bar,cs.firstChild);bar.querySelectorAll('.mask-chip').forEach(function(chip){chip.addEventListener('click',function(){settings.activeMaskId=this.dataset.mid;saveUserSettings();});});bar.querySelector('#addMaskDetailBtn')?.addEventListener('click',function(){openMaskEdit(null);});var ir=document.createElement('div');ir.className='comment-input-row';ir.innerHTML='<input type="text" id="detailCommentInput" placeholder="评论"><button id="detailCommentSendBtn">发送</button>';cs.appendChild(ir);$('detailCommentSendBtn').addEventListener('click',sendDetailComment);}
+function sendDetailComment(){var i=$('detailCommentInput');if(!i)return;var t=i.value.trim();if(!t)return;var npc=getActiveNpc();if(!npc)return;if(!npc.comments)npc.comments=[];var m=getActiveMask();npc.comments.push({author:m?m.name:'我',text:t,time:Date.now(),likes:0});if(!npc.chats)npc.chats=0;npc.chats++;if(npc.creator!==getUserKey())addNotif(npc.creator,'comment',{text:getUserKey()+' 评论了你的角色'});saveAllData();i.value='';renderRoleDetail();}
+function openMaskEdit(mask){if(mask){$('maskName').value=mask.name;$('maskGender').value=mask.gender||'';$('maskPersona').value=mask.persona||'';$('maskHobby').value=mask.hobby||'';$('maskCommand').value=mask.command||'';$('maskModal').dataset.editId=mask.id;}else{$('maskName').value='';$('maskGender').value='';$('maskPersona').value='';$('maskHobby').value='';$('maskCommand').value='';$('maskModal').dataset.editId='';}$('maskModal').classList.add('show');}
+function openEditOverlay(npc){
+    editCoverData=npc.image||'';editAvatarData=npc.avatar||'';var inner=$('editNpcInner');if(!inner)return;
+    inner.innerHTML='<h3>编辑 '+escapeHtml(npc.name)+'</h3>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editNameSec">角色信息 <span>▶</span></div><div class="collapse-body" id="editNameSec"><label>名称</label><input type="text" id="editNpcName" value="'+escapeHtml(npc.name)+'"><label>性别</label><input type="text" id="editNpcGender" value="'+escapeHtml(npc.gender||'')+'"></div></div>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editImgSec">角色图片 <span>▶</span></div><div class="collapse-body" id="editImgSec"><label>封面大图</label><div class="img-upload-area" id="editCoverUpload">'+(npc.image?'<img src="'+escapeHtml(npc.image)+'" alt="">':'<span class="upload-text">点击上传</span>')+'</div><input type="file" id="editCoverFile" accept="image/*" style="display:none"><label>头像</label><div class="img-upload-area" id="editAvatarUpload">'+(npc.avatar?'<img src="'+escapeHtml(npc.avatar)+'" alt="">':'<span class="upload-text">点击上传</span>')+'</div><input type="file" id="editAvatarFile" accept="image/*" style="display:none"><label>模糊度</label><input type="range" id="editBgBlur" min="0" max="20" value="'+(npc.bgBlur||0)+'"><label>亮度</label><input type="range" id="editBgBrightness" min="50" max="150" value="'+(npc.bgBrightness||100)+'"></div></div>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editTagSec">标签 <span>▶</span></div><div class="collapse-body" id="editTagSec"><input type="text" id="editNpcTags" value="'+((npc.tags||[]).join(','))+'"></div></div>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editIntroSec">介绍 <span>▶</span></div><div class="collapse-body" id="editIntroSec"><textarea id="editNpcIntro" rows="4">'+escapeHtml(npc.intro||'')+'</textarea></div></div>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editVisSec">可见性 <span>▶</span></div><div class="collapse-body" id="editVisSec"><select id="editNpcVisibility"><option value="link"'+(npc.visibility==='link'?'selected':'')+'>限制链接</option><option value="private"'+(npc.visibility==='private'?'selected':'')+'>私密</option><option value="public"'+(npc.visibility==='public'?'selected':'')+'>公开</option></select></div></div>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editPersonaSec">人设 <span>▶</span></div><div class="collapse-body" id="editPersonaSec"><textarea id="editNpcPersona" rows="6">'+escapeHtml(npc.persona||'')+'</textarea></div></div>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editAdversitySec">逆境处理 <span>▶</span></div><div class="collapse-body" id="editAdversitySec"><textarea id="editNpcAdversity" rows="5">'+escapeHtml(npc.adversity||'')+'</textarea></div></div>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editCSSSec">全局美化 <span>▶</span></div><div class="collapse-body" id="editCSSSec"><textarea id="editNpcCSS" rows="6">'+escapeHtml(npc.globalCSS||'')+'</textarea></div></div>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editWidgetSec">小剧场 <span>▶</span></div><div class="collapse-body" id="editWidgetSec"><textarea id="editNpcWidget" rows="6">'+escapeHtml(npc.widgetCode||'')+'</textarea></div></div>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editOpeningSec">开场设计 <span>▶</span></div><div class="collapse-body" id="editOpeningSec"><textarea id="editNpcOpening" rows="6">'+escapeHtml(npc.opening||'')+'</textarea></div></div>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editCognitionSec">默认认知 <span>▶</span></div><div class="collapse-body" id="editCognitionSec"><textarea id="editNpcCognition" rows="5">'+escapeHtml(npc.cognition||'')+'</textarea></div></div>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editPlotSec">情节设定 <span>▶</span></div><div class="collapse-body" id="editPlotSec"><div id="editPlotList"></div><button class="btn btn-outline" id="addEditPlotBtn" style="font-size:10px">+ 添加情节</button></div></div>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editOutputSec">输出设定 <span>▶</span></div><div class="collapse-body" id="editOutputSec"><textarea id="editNpcOutput" rows="6">'+escapeHtml(npc.outputRule||'')+'</textarea></div></div>';
+    inner.innerHTML+='<div class="edit-section-collapse"><div class="collapse-header" data-target="editSampleSec">样例文风 <span>▶</span></div><div class="collapse-body" id="editSampleSec"><textarea id="editNpcSample" rows="6">'+escapeHtml(npc.sample||'')+'</textarea></div></div>';
+    inner.innerHTML+='<div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" id="saveEditBtn">保存</button><button class="btn btn-danger" id="deleteEditBtn">删除</button><button class="btn btn-outline" id="cancelEditBtn">取消</button></div>';
+    setupImageUpload('editCoverUpload','editCoverFile','editCover');setupAvatarCrop('editAvatarUpload','editAvatarFile','editAvatar');
+    bindCollapseHeaders(inner);
+    if(npc.plots){var epc=0;npc.plots.forEach(function(p){epc++;var d=document.createElement('div');d.className='plot-item';d.innerHTML='<label>条件</label><input type="text" id="editPlotCond'+epc+'" value="'+escapeHtml(p.condition)+'"><label>结局</label><input type="text" id="editPlotEnd'+epc+'" value="'+escapeHtml(p.ending)+'"><button class="btn btn-danger del-plot-btn" style="font-size:9px">删除</button>';d.querySelector('.del-plot-btn').addEventListener('click',function(){d.remove();});$('editPlotList').appendChild(d);});window._editPlotCount=epc;}else{window._editPlotCount=0;}
+    $('addEditPlotBtn').addEventListener('click',function(){window._editPlotCount++;var d=document.createElement('div');d.className='plot-item';d.innerHTML='<label>条件</label><input type="text" id="editPlotCond'+window._editPlotCount+'" placeholder="条件"><label>结局</label><input type="text" id="editPlotEnd'+window._editPlotCount+'" placeholder="结局"><button class="btn btn-danger del-plot-btn" style="font-size:9px">删除</button>';d.querySelector('.del-plot-btn').addEventListener('click',function(){d.remove();});$('editPlotList').appendChild(d);});
+    inner.querySelector('#saveEditBtn').addEventListener('click',function(){
+        npc.name=inner.querySelector('#editNpcName').value||npc.name;npc.gender=inner.querySelector('#editNpcGender').value;npc.image=editCoverData||npc.image;npc.avatar=editAvatarData||npc.avatar;npc.bgBlur=parseInt(inner.querySelector('#editBgBlur').value)||0;npc.bgBrightness=parseInt(inner.querySelector('#editBgBrightness').value)||100;
+        npc.tags=inner.querySelector('#editNpcTags').value.split(',').map(function(t){return t.trim();}).filter(function(t){return t;});npc.intro=inner.querySelector('#editNpcIntro').value;var vis=inner.querySelector('#editNpcVisibility').value;npc.visibility=vis;npc.public=vis==='public';
+        npc.persona=inner.querySelector('#editNpcPersona').value;npc.adversity=inner.querySelector('#editNpcAdversity').value;npc.globalCSS=inner.querySelector('#editNpcCSS').value;npc.widgetCode=inner.querySelector('#editNpcWidget').value;npc.opening=inner.querySelector('#editNpcOpening').value;npc.cognition=inner.querySelector('#editNpcCognition').value;npc.outputRule=inner.querySelector('#editNpcOutput').value;npc.sample=inner.querySelector('#editNpcSample').value;
+        var plots=[];for(var i=1;i<=window._editPlotCount;i++){var c=inner.querySelector('#editPlotCond'+i),e=inner.querySelector('#editPlotEnd'+i);if(c&&e&&c.value.trim())plots.push({condition:c.value.trim(),ending:e.value.trim()});}npc.plots=plots;
+        var idx=allData.npcs.findIndex(function(n){return n.id===npc.id;});if(idx!==-1)allData.npcs[idx]=npc;saveAllData();$('editNpcOverlay').classList.remove('show');renderRoleDetail();
+    });inner.querySelector('#deleteEditBtn').addEventListener('click',function(){if(confirm('删除？')){allData.npcs=allData.npcs.filter(function(n){return n.id!==npc.id;});saveAllData();$('editNpcOverlay').classList.remove('show');closeDetailOverlay();switchPage('home');}});inner.querySelector('#cancelEditBtn').addEventListener('click',function(){$('editNpcOverlay').classList.remove('show');});$('editNpcOverlay').classList.add('show');
+}
+function bindCollapseHeaders(container){container.querySelectorAll('.collapse-header').forEach(function(h){h.addEventListener('click',function(){var targetId=this.dataset.target;var body=document.getElementById(targetId);if(body){body.classList.toggle('show');var arrow=this.querySelector('span');if(arrow)arrow.textContent=body.classList.contains('show')?'▼':'▶';}});});}
+  function openCreateOverlay(){
+    $('createNpcName').value='';$('createNpcGender').value='';$('createNpcTags').value='';$('createNpcIntro').value='';$('createNpcPersona').value='';$('createNpcAdversity').value='';$('createNpcCSS').value='';$('createNpcWidget').value='';$('createNpcOpening').value='';$('createNpcCognition').value='';$('createNpcOutput').value='';$('createNpcSample').value='';
+    $('createCoverUpload').innerHTML='<span class="upload-text">点击上传封面图</span>';$('createAvatarUpload').innerHTML='<span class="upload-text">点击上传头像</span>';
+    createCoverData=null;createAvatarData=null;createPlotCount=0;$('createPlotList').innerHTML='';createFileContents=[];$('createFileList').innerHTML='';
+    document.querySelectorAll('#createNpcOverlay .collapse-body').forEach(function(b){b.classList.remove('show');});
+    document.querySelectorAll('#createNpcOverlay .collapse-header span').forEach(function(s){s.textContent='▶';});
+    $('createNpcOverlay').classList.add('show');
+    bindCollapseHeaders($('createNpcOverlay'));
+}
+function setupImageUpload(ua,fid,target){var a=$(ua),f=$(fid);if(!a||!f)return;a.addEventListener('click',function(){f.click();});f.addEventListener('change',function(){var file=this.files[0];if(!file)return;var r=new FileReader();r.onload=function(e){var d=e.target.result;if(target==='cover'){createCoverData=d;a.innerHTML='<img src="'+d+'" alt="">';}else if(target==='avatar'){createAvatarData=d;a.innerHTML='<img src="'+d+'" alt="">';}else if(target==='editCover'){editCoverData=d;a.innerHTML='<img src="'+d+'" alt="">';}else if(target==='editAvatar'){editAvatarData=d;a.innerHTML='<img src="'+d+'" alt="">';}};r.readAsDataURL(file);});}
+function openCropModal(file,tid){var r=new FileReader();r.onload=function(e){cropData={scale:1,targetId:tid};$('cropImage').src=e.target.result;$('cropZoom').value=100;$('cropImage').style.left='0px';$('cropImage').style.top='0px';$('cropImage').style.transform='scale(1)';$('cropModal').classList.add('show');};r.readAsDataURL(file);}
+function setupAvatarCrop(ua,fid,tid){var f=$(fid);if(!f)return;f.addEventListener('change',function(){var file=this.files[0];if(!file)return;openCropModal(file,tid);});}
+function setupCreateOverlay(){
+    setupImageUpload('createCoverUpload','createCoverFile','cover');setupAvatarCrop('createAvatarUpload','createAvatarFile','createAvatar');
+    $('createNpcFiles').addEventListener('change',function(){var files=this.files;createFileContents=[];var list=$('createFileList');list.innerHTML='';for(var i=0;i<files.length;i++){(function(file){var r=new FileReader();r.onload=function(e){createFileContents.push({name:file.name,content:e.target.result});list.innerHTML+='<div>'+file.name+'</div>';};r.readAsText(file);})(files[i]);}});
+    $('addCreatePlotBtn').addEventListener('click',function(){createPlotCount++;var d=document.createElement('div');d.className='plot-item';d.innerHTML='<label>达成条件</label><input type="text" id="createPlotCond'+createPlotCount+'" placeholder="条件"><label>结局</label><input type="text" id="createPlotEnd'+createPlotCount+'" placeholder="结局"><button class="btn btn-danger del-plot-btn" style="font-size:9px">删除</button>';d.querySelector('.del-plot-btn').addEventListener('click',function(){d.remove();});$('createPlotList').appendChild(d);});
+    $('confirmCreateBtn').addEventListener('click',function(){
+        var name=$('createNpcName').value.trim();if(!name){alert('请输入角色名称');return;}var plots=[];
+        for(var i=1;i<=createPlotCount;i++){var c=$('createPlotCond'+i),e=$('createPlotEnd'+i);if(c&&e&&c.value.trim())plots.push({condition:c.value.trim(),ending:e.value.trim()});}
+        var vis=$('createNpcVisibility').value,isPublic=vis==='public';
+        var npc={id:'npc_'+Date.now(),name:name,image:createCoverData||'',avatar:createAvatarData||'',gender:$('createNpcGender').value,unlimited:$('createNpcUnlimited').value==='1',isAI:$('createNpcIsAI').value==='1',contentType:$('createNpcContentType').value,tags:$('createNpcTags').value.split(',').map(function(t){return t.trim();}).filter(function(t){return t;}),intro:$('createNpcIntro').value,visibility:vis,public:isPublic,persona:$('createNpcPersona').value,adversity:$('createNpcAdversity').value,globalCSS:$('createNpcCSS').value,widgetCode:$('createNpcWidget').value,opening:$('createNpcOpening').value,cognition:$('createNpcCognition').value,plots:plots,outputRule:$('createNpcOutput').value,sample:$('createNpcSample').value,files:createFileContents,creator:getUserKey(),approved:isAdmin(),favs:0,favUsers:[],chats:0,comments:[],moments:[],bgBlur:0,bgBrightness:100,createdAt:Date.now()};
+        allData.npcs.push(npc);settings.activeNpcId=npc.id;var key=getUserKey();if(!allData.creators[key])allData.creators[key]={name:key.split('@')[0],bio:'',level:1,avatar:'',bg:'',frame:'',widget:'',createdNpcs:[]};allData.creators[key].createdNpcs.push(npc.id);saveAllData();saveUserSettings();$('createNpcOverlay').classList.remove('show');switchPage('home');
+    });$('cancelCreateBtn').addEventListener('click',function(){$('createNpcOverlay').classList.remove('show');});
+}
+  function getChatHistoryKey(){return'chat_plat_'+getUserKey()+'_'+(settings.activeNpcId||'none')+'_'+(settings.activeMaskId||'none');}
+function getChatHistory(){if(!settings.activeNpcId||!settings.activeMaskId||!currentUser)return[];try{var s=localStorage.getItem(getChatHistoryKey());if(s)return JSON.parse(s);}catch(e){}return[];}
+function saveChatHistory(h){if(!settings.activeNpcId||!settings.activeMaskId||!currentUser)return;localStorage.setItem(getChatHistoryKey(),JSON.stringify(h));}
+function renderChatFromHistory(){chatMessages.innerHTML='';var h=getChatHistory();h.forEach(function(msg,i){if(msg.role==='assistant')appendChatBubble('his',msg.content,msg.extra,i);else if(msg.role==='user')appendChatBubble('mine',msg.content,msg.extra,i);});}
+function appendChatBubble(type,content,extra,index){var b=document.createElement('div');b.className='chat-bubble '+type;if(extra&&extra.type==='image'){b.innerHTML=(type==='his'&&getActiveNpc()?'<span class="sender-name">'+escapeHtml(getActiveNpc().name)+'</span>':'')+'<img src="'+escapeHtml(extra.url)+'" alt="">';}else if(extra&&extra.type==='transfer'){var td=extra.transferData;b.classList.add('transfer-card');b.dataset.transferId=td.id;b.innerHTML='<span>🧧</span><div class="transfer-amount">¥'+td.amount.toFixed(2)+'</div><span class="transfer-status-badge '+td.status+'">'+(td.status==='received'?'已收款':td.status==='returned'?'已退回':'待收款')+'</span>'+(type==='his'&&td.status==='pending'?'<div class="transfer-actions"><button class="transfer-action-btn receive-btn">收款</button><button class="transfer-action-btn return-btn">退回</button></div>':'');setTimeout(function(){b.querySelectorAll('.transfer-action-btn').forEach(function(btn){btn.addEventListener('click',function(e){e.stopPropagation();handleTransferAction(td.id,btn.classList.contains('receive-btn')?'receive':'return');});});},0);}else if(extra&&extra.type==='location'){b.classList.add('location-card');b.innerHTML='<span>📍</span><div>'+escapeHtml(extra.name)+'</div>';}else if(extra&&extra.type==='redPacket'){var pd=extra.packetData;b.classList.add('red-packet-card');if(pd.opened)b.classList.add('opened');b.innerHTML='<span class="packet-icon">🧧</span><div class="packet-text">'+escapeHtml(pd.note)+'</div>';}else{var dc=content||'';if(type==='his'&&getActiveNpc())b.innerHTML='<span class="sender-name">'+escapeHtml(getActiveNpc().name)+'</span>'+escapeHtml(dc).replace(/\n/g,'<br>');else b.innerHTML=escapeHtml(dc).replace(/\n/g,'<br>');}if(type==='his'&&index!=null){var a=document.createElement('div');a.className='msg-actions';a.innerHTML='<span class="retry-btn">🔄</span>';b.appendChild(a);a.querySelector('.retry-btn').addEventListener('click',function(){retryMessage(index);});}if(type==='mine'&&index!=null){var a=document.createElement('div');a.className='msg-actions';a.innerHTML='<span class="del-btn">🗑</span>';b.appendChild(a);a.querySelector('.del-btn').addEventListener('click',function(){deleteMessage(index);});}chatMessages.appendChild(b);}
+function retryMessage(i){var h=getChatHistory();if(i>=h.length-1||h[i].role!=='assistant')return;h.splice(i,1);saveChatHistory(h);renderChatFromHistory();scrollChatBottom();triggerAiResponse();}
+function deleteMessage(i){var h=getChatHistory();if(i>=h.length||h[i].role!=='user')return;h.splice(i,1);saveChatHistory(h);renderChatFromHistory();scrollChatBottom();}
+function buildSystemPrompt(){var npc=getActiveNpc(),mask=getActiveMask();var p='你是'+ (npc?npc.name:'角色') +'。\n';if(npc){p+='【人设】'+ (npc.persona||'') +'\n【逆境处理】'+ (npc.adversity||'') +'\n【默认认知】'+ (npc.cognition||'') +'\n【输出设定】'+ (npc.outputRule||'') +'\n【样例文风】'+ (npc.sample||'') +'\n【开场】'+ (npc.opening||'') +'\n';if(npc.plots&&npc.plots.length>0){p+='【情节设定】\n';npc.plots.forEach(function(pl){p+='条件:'+pl.condition+' 结局:'+pl.ending+'\n';});}if(npc.files&&npc.files.length>0){p+='【资料库】\n';npc.files.forEach(function(f){p+=f.name+': '+f.content+'\n';});}}if(mask)p+='【用户】'+mask.name+'，'+ (mask.gender||'') +'，'+ (mask.persona||'') +'\n';return p;}
+async function triggerAiResponse(){var api=getActiveApi();if(!api.url||!api.key||!api.model){var h=getChatHistory();h.push({role:'assistant',content:'API未配置'});saveChatHistory(h);appendChatBubble('his','API未配置');return;}isGenerating=true;chatSendBtn.disabled=true;showTyping();var h=getChatHistory();var msgs=[{role:'system',content:buildSystemPrompt()}].concat(h.slice(-20));try{var r=await callApi(api.url,api.key,api.model,msgs);removeTyping();h.push({role:'assistant',content:r});saveChatHistory(h);appendChatBubble('his',r,null,h.length-1);scrollChatBottom();}catch(err){removeTyping();h.push({role:'assistant',content:'出错：'+err.message});saveChatHistory(h);appendChatBubble('his','出错：'+err.message);scrollChatBottom();}finally{isGenerating=false;chatSendBtn.disabled=false;chatInput.focus();}}
+async function callApi(url,key,model,messages){var c=new AbortController();var t=setTimeout(function(){c.abort();},60000);try{var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:model,temperature:0.85,max_tokens:2000,messages:messages}),signal:c.signal});clearTimeout(t);if(!r.ok)throw new Error('HTTP '+r.status);var d=await r.json();if(d.choices&&d.choices[0]&&d.choices[0].message)return d.choices[0].message.content;throw new Error('响应异常');}catch(e){clearTimeout(t);if(e.name==='AbortError')throw new Error('超时');throw e;}}
+function showTyping(){var d=document.createElement('div');d.className='typing-indicator';d.innerHTML='<span></span><span></span><span></span>';chatMessages.appendChild(d);scrollChatBottom();}
+function removeTyping(){var d=document.getElementById('typingIndicator');if(d)d.remove();}
+function scrollChatBottom(){setTimeout(function(){chatMessages.scrollTop=chatMessages.scrollHeight;},50);}
+function sendChatMessage(){if(isGenerating||!settings.activeNpcId||!settings.activeMaskId)return;var text=chatInput.value.trim();if(!text)return;var h=getChatHistory();h.push({role:'user',content:text});saveChatHistory(h);appendChatBubble('mine',text,null,h.length-1);chatInput.value='';scrollChatBottom();var npc=getActiveNpc();if(npc){if(!npc.chats)npc.chats=0;npc.chats++;saveAllData();var uf=getUserFans(getUserKey());uf.chatCount=(uf.chatCount||0)+1;if(uf.chatCount>=10){uf.chatCount=0;uf.powder=(uf.powder||0)+1;allData.userFans[getUserKey()]=uf;saveAllData();}}triggerAiResponse();}
+function renderMaskSwitchBarChat(){var bar=$('maskSwitchBarChat');if(!bar)return;bar.innerHTML='';settings.masks.forEach(function(m){bar.innerHTML+='<div class="mask-chip'+(m.id===settings.activeMaskId?' active':'')+'" data-mid="'+m.id+'">'+escapeHtml(m.name)+'</div>';});bar.innerHTML+='<button class="mini-btn" id="addMaskChatBtn">+</button>';bar.querySelectorAll('.mask-chip').forEach(function(chip){chip.addEventListener('click',function(){settings.activeMaskId=this.dataset.mid;saveUserSettings();});});bar.querySelector('#addMaskChatBtn')?.addEventListener('click',function(){openMaskEdit(null);});}
+  function getMoments(){var n=getActiveNpc();return n&&n.moments?n.moments:[];}
+function saveMoments(m){var n=getActiveNpc();if(n){n.moments=m;saveAllData();}}
+function renderMoments(){if(!getActiveNpc())return;momentsFeed.innerHTML='';getMoments().sort(function(a,b){return b.time-a.time;}).forEach(function(mt){var c=document.createElement('div');c.className='moment-card';var il=mt.likes.indexOf(getActiveMask()?getActiveMask().name:'我')!==-1;c.innerHTML='<div class="moment-header"><div class="moment-avatar">'+escapeHtml(mt.author.charAt(0))+'</div><div><div class="moment-user-name">'+escapeHtml(mt.author)+'</div><div class="moment-time">'+formatTime(mt.time)+'</div></div></div><div class="moment-content">'+escapeHtml(mt.content)+'</div><div class="moment-actions"><button class="action-btn '+(il?'liked':'')+'">'+(il?'❤️':'🤍')+' '+(mt.likes.length||0)+'</button></div>';momentsFeed.appendChild(c);});}
+function postUserMoment(){var t=userMomentInput.value.trim();if(!t||!getActiveNpc())return;var m=getMoments();m.push({id:'um_'+Date.now(),author:getActiveMask()?getActiveMask().name:'我',content:t,time:Date.now(),likes:[],replies:[]});userMomentInput.value='';saveMoments(m);renderMoments();}
+function sendEmoji(){var u=$('emojiUrl').value.trim();if(!u)return;var d=$('emojiDesc').value.trim()||'图片';var h=getChatHistory();h.push({role:'user',content:'[图片] '+d,extra:{type:'image',url:u,desc:d}});saveChatHistory(h);appendChatBubble('mine',null,{type:'image',url:u,desc:d});$('emojiModal').classList.remove('show');scrollChatBottom();triggerAiResponse();}
+function sendTransfer(){var a=parseFloat($('transferAmount').value);if(!a||a<=0)return;var n=$('transferNote').value.trim()||'转账';var tid='tf_'+Date.now();var td={id:tid,amount:a,note:n,status:'pending'};var h=getChatHistory();h.push({role:'user',content:'[转账]',extra:{type:'transfer',transferData:td}});saveChatHistory(h);appendChatBubble('mine',null,{type:'transfer',transferData:td});$('transferModal').classList.remove('show');scrollChatBottom();triggerAiResponse();}
+function handleTransferAction(tid,act){var h=getChatHistory();if(act==='receive'){h.push({role:'assistant',content:'谢谢！'});updateTransferBubble(tid,'received');}else{h.push({role:'assistant',content:'退回去了。'});updateTransferBubble(tid,'returned');}saveChatHistory(h);appendChatBubble('his',h[h.length-1].content);scrollChatBottom();}
+function updateTransferBubble(tid,s){chatMessages.querySelectorAll('.transfer-card').forEach(function(b){if(b.dataset.transferId===tid){var badge=b.querySelector('.transfer-status-badge');if(badge){badge.textContent=s==='received'?'已收款':'已退回';badge.className='transfer-status-badge '+s;}var a=b.querySelector('.transfer-actions');if(a)a.style.display='none';}});}
+function sendLocation(){var n=$('locationName').value.trim();if(!n)return;var h=getChatHistory();h.push({role:'user',content:'[定位]',extra:{type:'location',name:n}});saveChatHistory(h);appendChatBubble('mine',null,{type:'location',name:n});$('locationModal').classList.remove('show');scrollChatBottom();triggerAiResponse();}
+function getRealLocation(){if(!navigator.geolocation)return;navigator.geolocation.getCurrentPosition(function(p){$('locationName').value='('+p.coords.latitude.toFixed(4)+','+p.coords.longitude.toFixed(4)+')';},function(){},{});}
+function sendRedPacket(){var a=parseFloat($('redPacketAmount').value);if(!a||a<=0)return;var n=$('redPacketNote').value.trim()||'恭喜发财';var h=getChatHistory();h.push({role:'user',content:'[红包]',extra:{type:'redPacket',packetData:{amount:a,note:n,opened:false}}});saveChatHistory(h);appendChatBubble('mine',null,{type:'redPacket',packetData:{amount:a,note:n,opened:false}});$('redPacketModal').classList.remove('show');scrollChatBottom();triggerAiResponse();}
+function renderSaves(){var c=$('savesContent');if(!c)return;var key='saves_plat_'+getUserKey();var sl=saves[key]||[];c.innerHTML='<h3>存档</h3><button class="btn btn-primary" id="newSaveBtn">保存当前对话</button><div>';if(sl.length===0)c.innerHTML+='<p style="color:#999">暂无</p>';else sl.forEach(function(s,i){c.innerHTML+='<div class="save-slot" style="background:#fff;border-radius:12px;padding:12px;margin:4px 0"><div class="save-title" style="font-weight:700">'+escapeHtml(s.name)+'</div><div class="btn-row"><button class="btn btn-outline load-sv" data-idx="'+i+'">加载</button><button class="btn btn-outline exp-sv" data-idx="'+i+'">导出</button><button class="btn btn-danger del-sv" data-idx="'+i+'">删除</button></div></div>';});c.innerHTML+='</div>';c.querySelector('#newSaveBtn')?.addEventListener('click',function(){$('saveModal').classList.add('show');});c.querySelectorAll('.load-sv').forEach(function(b){b.addEventListener('click',function(){loadSave(parseInt(this.dataset.idx));});});c.querySelectorAll('.exp-sv').forEach(function(b){b.addEventListener('click',function(){exportSave(parseInt(this.dataset.idx));});});c.querySelectorAll('.del-sv').forEach(function(b){b.addEventListener('click',function(){deleteSave(parseInt(this.dataset.idx));});});}
+function loadSave(i){var key='saves_plat_'+getUserKey();var sl=saves[key]||[];if(!sl[i])return;localStorage.setItem(getChatHistoryKey(),JSON.stringify(sl[i].history));switchPage('chat');renderChatFromHistory();}
+function exportSave(i){var key='saves_plat_'+getUserKey();var sl=saves[key]||[];if(!sl[i])return;var t='';sl[i].history.forEach(function(m){t+=(m.role==='user'?'我':(getActiveNpc()?getActiveNpc().name:'角色'))+': '+m.content+'\n\n';});if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){alert('已复制');});}
+function deleteSave(i){var key='saves_plat_'+getUserKey();if(!saves[key])saves[key]=[];saves[key].splice(i,1);saveAllData();renderSaves();}
+function doSave(){var n=$('saveNameInput').value.trim()||'存档';var key='saves_plat_'+getUserKey();if(!saves[key])saves[key]=[];var h=getChatHistory();saves[key].push({name:n,time:Date.now(),msgCount:h.length,history:JSON.parse(JSON.stringify(h))});saveAllData();$('saveModal').classList.remove('show');switchPage('saves');}
+function renderExtras(){var l=$('extraList');if(!l)return;l.innerHTML='';if(settings.extras.length===0)l.innerHTML='<p style="color:#999">暂无</p>';else settings.extras.forEach(function(e,i){l.innerHTML+='<div style="background:#fff;border-radius:8px;padding:8px;margin:4px 0"><div>'+escapeHtml(e.name)+'</div><button class="btn btn-outline use-ex" data-idx="'+i+'">复制</button></div>';});l.querySelectorAll('.use-ex').forEach(function(b){b.addEventListener('click',function(){chatInput.value=settings.extras[parseInt(this.dataset.idx)].content;$('extraModal').classList.remove('show');switchPage('chat');chatInput.focus();});});}
+function renderSettings(){var c=$('settingsContent');if(!c)return;c.innerHTML='<div class="settings-card"><h3>API (第'+(settings.activeApiGroup+1)+'组)</h3>';for(var i=0;i<3;i++){c.innerHTML+='<div style="margin-bottom:4px;padding:4px;background:'+(i===settings.activeApiGroup?'#e8f4fd':'#f8f7f4')+'"><label>组'+(i+1)+'</label><input type="text" id="apiUrl'+i+'" value="'+escapeHtml(settings.apiGroups[i].url)+'" placeholder="地址"><input type="password" id="apiKey'+i+'" value="'+escapeHtml(settings.apiGroups[i].key)+'" placeholder="Key"><input type="text" id="apiModel'+i+'" value="'+escapeHtml(settings.apiGroups[i].model)+'" placeholder="模型"><button class="btn btn-outline sw-api" data-idx="'+i+'">切换</button></div>';}c.innerHTML+='<button class="btn btn-primary" id="saveApiBtn">保存</button></div>';c.innerHTML+='<div class="settings-card"><h3>面具</h3><div id="maskListSet"></div><button class="btn btn-outline" id="addMaskSet">+新建</button></div>';c.innerHTML+='<div class="settings-card"><h3>背景</h3><label>图片链接</label><input type="text" id="bgImgInp" value="'+escapeHtml(settings.bgImage||'')+'"><button class="btn btn-primary" id="saveBgBtn">应用</button></div>';c.innerHTML+='<div class="settings-card"><h3>主题</h3><button class="btn btn-outline" id="toggleDarkBtn">'+(settings.darkMode?'浅色':'暗黑')+'</button></div>';if(isAdmin()){c.innerHTML+='<div class="settings-card"><h3>审核管理</h3><button class="btn btn-primary" id="gotoReviewBtn">进入审核页面</button></div>';}c.innerHTML+='<div class="settings-card"><button class="btn btn-danger" id="clearChatBtn">清空对话</button></div>';document.querySelectorAll('.sw-api').forEach(function(b){b.addEventListener('click',function(){settings.activeApiGroup=parseInt(this.dataset.idx);saveUserSettings();renderSettings();});});$('saveApiBtn').addEventListener('click',function(){for(var i=0;i<3;i++){settings.apiGroups[i].url=$('apiUrl'+i).value.trim();settings.apiGroups[i].key=$('apiKey'+i).value.trim();settings.apiGroups[i].model=$('apiModel'+i).value.trim();}saveUserSettings();});$('addMaskSet').addEventListener('click',function(){openMaskEdit(null);});$('saveBgBtn').addEventListener('click',function(){settings.bgImage=$('bgImgInp').value.trim();saveUserSettings();applyChatBg();});$('toggleDarkBtn').addEventListener('click',function(){settings.darkMode=!settings.darkMode;saveUserSettings();document.getElementById('phoneContainer').classList.toggle('dark-mode',settings.darkMode);renderSettings();});var grb=$('gotoReviewBtn');if(grb)grb.addEventListener('click',renderAdminPanel);$('clearChatBtn').addEventListener('click',function(){if(confirm('清空？')){localStorage.removeItem(getChatHistoryKey());switchPage('chat');renderChatFromHistory();}});renderMaskListSet();}
+function renderMaskListSet(){var l=$('maskListSet');if(!l)return;l.innerHTML='';settings.masks.forEach(function(m){l.innerHTML+='<div style="display:flex;align-items:center;gap:4px"><span>'+escapeHtml(m.name)+'</span><button class="btn btn-outline em" data-mid="'+m.id+'">编辑</button></div>';});l.querySelectorAll('.em').forEach(function(b){b.addEventListener('click',function(){var m=settings.masks.find(function(mm){return mm.id===b.dataset.mid;});if(m)openMaskEdit(m);});});}
+function applyChatBg(){if(settings.bgImage){chatMessages.style.backgroundImage='url('+settings.bgImage+')';chatMessages.style.backgroundSize='cover';}else{chatMessages.style.background=settings.chatBg;}}
+  function initDynamicIsland(){dynamicIsland.addEventListener('click',function(e){if(e.target===$('islandClose'))return;if(!this.classList.contains('expanded'))this.classList.add('expanded');});document.querySelector('.screen').addEventListener('click',function(e){if(!dynamicIsland.contains(e.target)&&dynamicIsland.classList.contains('expanded'))dynamicIsland.classList.remove('expanded');});$('islandClose').addEventListener('click',function(e){e.stopPropagation();dynamicIsland.classList.remove('expanded');});$('playMusicBtn').addEventListener('click',function(){var u=$('musicUrlInput').value.trim(),t=$('musicTitleInput').value.trim()||'未知';if(!u)return;currentMusicUrl=u;currentMusicTitle=t;if(audioPlayer)audioPlayer.pause();audioPlayer=new Audio(u);audioPlayer.play().catch(function(){});islandText.textContent='▶ '+t;});$('pauseMusicBtn').addEventListener('click',function(){if(audioPlayer)audioPlayer.pause();islandText.textContent='⏸ 暂停';});$('shareMusicBtn').addEventListener('click',function(){if(!currentMusicUrl)return;var h=getChatHistory();h.push({role:'user',content:'[音乐] '+currentMusicTitle,extra:{type:'music',title:currentMusicTitle,url:currentMusicUrl}});saveChatHistory(h);appendChatBubble('mine',null,{type:'music',title:currentMusicTitle,url:currentMusicUrl});scrollChatBottom();});}
+        function initCropModal(){var ci=$('cropImage'),zs=$('cropZoom');var id=false,sx=0,sy=0,ix=0,iy=0;ci.addEventListener('mousedown',function(e){id=true;sx=e.clientX-ix;sy=e.clientY-iy;});ci.addEventListener('touchstart',function(e){id=true;sx=e.touches[0].clientX-ix;sy=e.touches[0].clientY-iy;});window.addEventListener('mouseup',function(){id=false;});window.addEventListener('touchend',function(){id=false;});window.addEventListener('mousemove',function(e){if(!id)return;ix=e.clientX-sx;iy=e.clientY-sy;ci.style.left=ix+'px';ci.style.top=iy+'px';});window.addEventListener('touchmove',function(e){if(!id)return;ix=e.touches[0].clientX-sx;iy=e.touches[0].clientY-sy;ci.style.left=ix+'px';ci.style.top=iy+'px';});zs.addEventListener('input',function(){cropData.scale=parseInt(this.value)/100;ci.style.transform='scale('+cropData.scale+')';});$('confirmCropBtn').addEventListener('click',function(){var cv=document.createElement('canvas');cv.width=200;cv.height=200;var ctx=cv.getContext('2d');ctx.drawImage(ci,-ix/cropData.scale,-iy/cropData.scale,200/cropData.scale,200/cropData.scale,0,0,200,200);var cr=cv.toDataURL('image/jpeg',0.9);if(cropData.targetId==='createAvatar'){createAvatarData=cr;$('createAvatarUpload').innerHTML='<img src="'+cr+'" alt="">';}else if(cropData.targetId==='editAvatar'){editAvatarData=cr;$('editAvatarUpload').innerHTML='<img src="'+cr+'" alt="">';}$('cropModal').classList.remove('show');});$('cancelCropBtn').addEventListener('click',function(){$('cropModal').classList.remove('show');});}
+        function bindAllEvents(){
+            chatSendBtn.addEventListener('click',sendChatMessage);chatInput.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();sendChatMessage();}});
+            $('plusMenuBtn').addEventListener('click',function(e){e.stopPropagation();$('plusMenu').classList.toggle('show');});document.addEventListener('click',function(e){if(!e.target.closest('#plusMenu')&&!e.target.closest('#plusMenuBtn'))$('plusMenu').classList.remove('show');});
+            $('emojiBtn').addEventListener('click',function(){$('plusMenu').classList.remove('show');$('emojiModal').classList.add('show');});$('closeEmojiBtn').addEventListener('click',function(){$('emojiModal').classList.remove('show');});$('addEmojiBtn').addEventListener('click',sendEmoji);
+            $('transferBtn').addEventListener('click',function(){$('plusMenu').classList.remove('show');$('transferModal').classList.add('show');});$('closeTransferBtn').addEventListener('click',function(){$('transferModal').classList.remove('show');});$('confirmTransferBtn').addEventListener('click',sendTransfer);
+            $('locationBtn').addEventListener('click',function(){$('plusMenu').classList.remove('show');$('locationModal').classList.add('show');});$('closeLocationBtn').addEventListener('click',function(){$('locationModal').classList.remove('show');});$('confirmLocationBtn').addEventListener('click',sendLocation);$('getRealLocationBtn').addEventListener('click',getRealLocation);
+            $('redPacketBtn').addEventListener('click',function(){$('plusMenu').classList.remove('show');$('redPacketModal').classList.add('show');});$('closeRedPacketBtn').addEventListener('click',function(){$('redPacketModal').classList.remove('show');});$('confirmRedPacketBtn').addEventListener('click',sendRedPacket);
+            $('extraBtn').addEventListener('click',function(){$('plusMenu').classList.remove('show');renderExtras();$('extraModal').classList.add('show');});$('closeExtraBtn').addEventListener('click',function(){$('extraModal').classList.remove('show');});$('addExtraBtn').addEventListener('click',function(){var n=$('extraNameInput').value.trim(),c=$('extraContentInput').value.trim();if(!n||!c)return;settings.extras.push({name:n,content:c});saveUserSettings();$('extraNameInput').value='';$('extraContentInput').value='';renderExtras();});
+            $('confirmSaveBtn').addEventListener('click',doSave);$('closeSaveBtn').addEventListener('click',function(){$('saveModal').classList.remove('show');});
+            $('saveMaskBtn').addEventListener('click',function(){var eid=$('maskModal').dataset.editId;var d={name:$('maskName').value.trim()||'面具',gender:$('maskGender').value,persona:$('maskPersona').value,hobby:$('maskHobby').value,command:$('maskCommand').value};if(eid){var m=settings.masks.find(function(mm){return mm.id===eid;});if(m)Object.assign(m,d);}else{d.id='mask_'+Date.now();settings.masks.push(d);if(!settings.activeMaskId)settings.activeMaskId=d.id;}saveUserSettings();$('maskModal').classList.remove('show');if(currentPage==='chat')renderMaskSwitchBarChat();});
+            $('deleteMaskBtn').addEventListener('click',function(){var eid=$('maskModal').dataset.editId;if(eid&&confirm('删除？')){settings.masks=settings.masks.filter(function(m){return m.id!==eid;});if(settings.activeMaskId===eid)settings.activeMaskId=settings.masks[0]?settings.masks[0].id:null;saveUserSettings();$('maskModal').classList.remove('show');}});$('closeMaskBtn').addEventListener('click',function(){$('maskModal').classList.remove('show');});
+            $('copyShareLinkBtn').addEventListener('click',function(){var l=$('shareLink').value;if(l&&navigator.clipboard)navigator.clipboard.writeText(l).then(function(){alert('已复制');});});$('closeShareBtn').addEventListener('click',function(){$('shareModal').classList.remove('show');});
+            $('sendAnnounceBtn').addEventListener('click',function(){var c=$('announceContent').value.trim();if(!c)return;allData.announcements.unshift({content:c,time:Date.now()});saveAllData();$('announceModal').classList.remove('show');alert('公告已发布！');});$('closeAnnounceBtn').addEventListener('click',function(){$('announceModal').classList.remove('show');});
+            $('sendWelfareBtn').addEventListener('click',function(){var c=$('welfareContent').value.trim();if(!c)return;Object.keys(allData.users).forEach(function(email){addNotif(email,'welfare',{text:'官方福利：'+c});});$('welfareModal').classList.remove('show');alert('福利已发放！');});$('closeWelfareBtn').addEventListener('click',function(){$('welfareModal').classList.remove('show');});
+            $('confirmBanBtn').addEventListener('click',function(){var email=$('banEmailInput').value.trim().toLowerCase();if(!email)return;allData.banned[email]=true;saveAllData();alert(email+' 已被封禁');$('banModal').classList.remove('show');});
+            $('confirmUnbanBtn').addEventListener('click',function(){var email=$('banEmailInput').value.trim().toLowerCase();if(!email)return;delete allData.banned[email];saveAllData();alert(email+' 已解封');$('banModal').classList.remove('show');});$('closeBanBtn').addEventListener('click',function(){$('banModal').classList.remove('show');});
+            $('saveUserEditBtn').addEventListener('click',function(){var key=getUserKey();if(!allData.creators[key])allData.creators[key]={};allData.creators[key].avatar=$('editUserAvatar').value.trim();allData.creators[key].bg=$('editUserBg').value.trim();allData.creators[key].name=$('editUserName').value.trim()||key.split('@')[0];allData.creators[key].bio=$('editUserBio').value.trim();saveAllData();$('userEditModal').classList.remove('show');if(currentPage==='user')renderUserPage();});$('closeUserEditBtn').addEventListener('click',function(){$('userEditModal').classList.remove('show');});
+            bellBtn.addEventListener('click',function(){renderNotifs();$('notifOverlay').classList.add('show');});$('notifBackBtn').addEventListener('click',function(){$('notifOverlay').classList.remove('show');});$('markAllReadBtn').addEventListener('click',function(){markAllRead();renderNotifs();});
+            $('adminBackBtn').addEventListener('click',function(){$('adminOverlay').classList.remove('show');});
+            userMomentBtn.addEventListener('click',postUserMoment);userMomentInput.addEventListener('keydown',function(e){if(e.key==='Enter')postUserMoment();});
+            $('loginBtn').addEventListener('click',doLogin);$('loginPassword').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+            $('toggleRegister').addEventListener('click',function(){isRegisterMode=true;$('toggleRegister').style.display='none';$('toggleLogin').style.display='inline';$('loginBtn').textContent='注 册';});$('toggleLogin').addEventListener('click',function(){isRegisterMode=false;$('toggleRegister').style.display='inline';$('toggleLogin').style.display='none';$('loginBtn').textContent='登 录';});
+            $('logoutBtn').addEventListener('click',doLogout);
+            backBtn.addEventListener('click',function(){if($('notifOverlay').classList.contains('show')){$('notifOverlay').classList.remove('show');return;}if($('adminOverlay').classList.contains('show')){$('adminOverlay').classList.remove('show');return;}if($('detailOverlay').classList.contains('show')){closeDetailOverlay();return;}if($('createNpcOverlay').classList.contains('show')){$('createNpcOverlay').classList.remove('show');return;}if($('editNpcOverlay').classList.contains('show')){$('editNpcOverlay').classList.remove('show');return;}if(currentPage==='user')switchPage('home');else if(currentPage==='chat'||currentPage==='moments'){if(getActiveNpc())openDetailOverlay();else switchPage('home');}else if(currentPage==='saves'||currentPage==='settings')switchPage('home');});
+            document.querySelectorAll('.bottom-nav .nav-item').forEach(function(item){item.addEventListener('click',function(){switchPage(item.dataset.page);});});
+            document.querySelectorAll('.modal-overlay').forEach(function(m){m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});});
+            var sortBar=$('sortBar');if(sortBar)sortBar.querySelectorAll('span').forEach(function(s){s.addEventListener('click',function(){sortBar.querySelectorAll('span').forEach(function(ss){ss.classList.remove('active');});this.classList.add('active');renderNpcCards();});});
+            var searchInput=$('searchNpcInput');if(searchInput)searchInput.addEventListener('input',function(){renderNpcCards();});
+        }
+        function init(){updateTime();setInterval(updateTime,30000);loadAllData();initDynamicIsland();initCropModal();setupCreateOverlay();bindAllEvents();autoLogin();if(!currentUser)switchPage('login');}
+        init();
+    })();
+    </script>
+</body>
+</html>
